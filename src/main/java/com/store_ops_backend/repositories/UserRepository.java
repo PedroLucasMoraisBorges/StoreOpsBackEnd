@@ -7,5 +7,5 @@ import com.store_ops_backend.models.entities.User;
 
 
 public interface UserRepository extends JpaRepository<User, String> {
-    UserDetails findByEmail(String email);
+    UserDetails findBylogin(String login);
 }

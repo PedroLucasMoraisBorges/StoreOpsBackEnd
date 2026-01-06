@@ -34,7 +34,7 @@ public class AuthController {
     @SuppressWarnings("rawtypes")
     @PostMapping("/login")
     public ResponseEntity login(@RequestBody @Valid AuthenticationDTO data) {
-        var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.password());
+        var usernamePassword = new UsernamePasswordAuthenticationToken(data.login(), data.password());
         var auth = this.authenticationManager.authenticate(usernamePassword);
         var token = tokenService.generateToken((User) auth.getPrincipal());
 
@@ -44,10 +44,13 @@ public class AuthController {
     @SuppressWarnings("rawtypes")
     @PostMapping("/register")
     public ResponseEntity register(@RequestBody @Valid RegisterDTO data) {
-        if (this.userRepository.findByEmail(data.email()) != null) return ResponseEntity.badRequest().build();
+        System.out.println("Registering user....................................................................................");
+        if (this.userRepository.findBylogin(data.login()) != null) return ResponseEntity.badRequest().build();
+
+        System.out.println(data);
 
         String encryptPassword = new BCryptPasswordEncoder().encode(data.password());
-        User newUser = new User(data.email(), encryptPassword, data.role());
+        User newUser = new User(data.login(), data.name(), encryptPassword, data.role());
         this.userRepository.save(newUser);
 
         return ResponseEntity.ok().build();
