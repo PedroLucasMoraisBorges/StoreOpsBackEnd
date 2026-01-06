@@ -1,4 +1,4 @@
-package com.StoreOpsBackEnd;
+package com.store_ops_backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
