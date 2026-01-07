@@ -23,4 +23,8 @@ public class Company {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String name;
+
+    public Company(String name) {
+        this.name = name;
+    }
 }

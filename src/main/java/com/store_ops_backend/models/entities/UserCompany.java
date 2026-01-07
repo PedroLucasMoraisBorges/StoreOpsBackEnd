@@ -15,8 +15,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Table(name = "users_companies")
-@Entity(name = "users_companies")
+@Table(name = "user_companies")
+@Entity(name = "user_companies")
 
 @Getter
 @NoArgsConstructor
@@ -39,6 +39,13 @@ public class UserCompany {
     @MapsId("companyId")
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+
+    public UserCompany(User user, Company company, String role) {
+        this.user = user;
+        this.company = company;
+        this.role = role;
+        this.id = new UserCompanyId(user.getId(), company.getId());
+    }
 }
 
 @Embeddable
