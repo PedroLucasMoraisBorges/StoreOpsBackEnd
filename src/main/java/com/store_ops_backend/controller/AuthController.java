@@ -44,10 +44,7 @@ public class AuthController {
     @SuppressWarnings("rawtypes")
     @PostMapping("/register")
     public ResponseEntity register(@RequestBody @Valid RegisterDTO data) {
-        System.out.println("Registering user....................................................................................");
         if (this.userRepository.findBylogin(data.login()) != null) return ResponseEntity.badRequest().build();
-
-        System.out.println(data);
 
         String encryptPassword = new BCryptPasswordEncoder().encode(data.password());
         User newUser = new User(data.login(), data.name(), encryptPassword, data.role());
