@@ -3,6 +3,7 @@ package com.store_ops_backend.services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.store_ops_backend.models.dtos.CompanyResponseDTO;
 import com.store_ops_backend.models.dtos.CreateCompanyDTO;
 import com.store_ops_backend.models.entities.Company;
 import com.store_ops_backend.models.entities.User;
@@ -16,18 +17,26 @@ public class CompanyService {
     @Autowired 
     private UserCompanyService userCompanyService;
 
+    @Autowired 
+    private PaymentMethodService paymentMethodService;
+
     @Autowired
     private AuthenticationService authenticationService;
 
 
-    public Company createCompany(CreateCompanyDTO data, String userId) {
-        Company newCompany = new Company(data.name());
+    public CompanyResponseDTO createCompany(CreateCompanyDTO data, String userId) {
+        Company newCompany = new Company(data.name(), data.type(), data.address(), data.phone(), data.teamSize(), data.formOfService(),
+            data.notifications().newOrder(), data.notifications().weeklyReports(),
+            data.notifications().email(), data.notifications().accounts());
         repository.save(newCompany);
         User user = authenticationService.loadUserById(userId);
         
-        System.out.println("Associating user " + user.getLogin() + " with company " + newCompany.getName() + " as ADMIN.");
         userCompanyService.createUserCompany(user, newCompany, "ADMIN");
 
-        return newCompany;
+        paymentMethodService.createCompanyPaymentMethods(newCompany, data.paymentMethodIds());
+
+        System.out.println(newCompany.getId());
+        var paymentMethods = paymentMethodService.getCompanyPaymentMethods(newCompany.getId());
+        return new CompanyResponseDTO(newCompany, paymentMethods);
     }
 }

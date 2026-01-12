@@ -1,5 +1,6 @@
 package com.store_ops_backend.models.entities;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 import jakarta.persistence.Entity;
@@ -27,7 +28,7 @@ public class AccountTransactions {
     private String id;
 
     private String origin;
-    private Number amount;
+    private BigDecimal amount;
     private String description;
     private OffsetDateTime created_at;
 

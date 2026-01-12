@@ -23,8 +23,26 @@ public class Company {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String name;
+    private String type;
+    private String address;
+    private String phone;
+    private String team_size;
+    private String form_of_service;
+    private Boolean notification_new_order;
+    private Boolean weekly_reports;
+    private Boolean notification_in_email;
+    private Boolean notification_for_accounts;
 
-    public Company(String name) {
+    public Company(String name, String type, String address, String phone, String team_size, String form_of_service,Boolean notification_new_order, Boolean weekly_reports, Boolean notification_in_email,Boolean notification_for_accounts) {
         this.name = name;
+        this.type = type;
+        this.address = address;
+        this.phone = phone;
+        this.team_size = team_size;
+        this.form_of_service = form_of_service;
+        this.notification_new_order = notification_new_order;
+        this.weekly_reports = weekly_reports;
+        this.notification_in_email = notification_in_email;
+        this.notification_for_accounts = notification_for_accounts;
     }
 }
