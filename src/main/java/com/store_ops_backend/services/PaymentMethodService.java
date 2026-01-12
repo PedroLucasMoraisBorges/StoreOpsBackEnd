@@ -1,7 +1,9 @@
 package com.store_ops_backend.services;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,8 @@ import com.store_ops_backend.models.entities.CompanyPaymentMethods;
 import com.store_ops_backend.models.entities.PaymentMethods;
 import com.store_ops_backend.repositories.CompanyPaymentMethodsRepository;
 import com.store_ops_backend.repositories.PaymentMethodRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class PaymentMethodService {
@@ -49,5 +53,34 @@ public class PaymentMethodService {
 
         return paymentMethodDTOs;
     }   
+
+    @Transactional
+    public void syncCompanyPaymentMethods(
+            Company company,
+            List<String> newPaymentMethodIds
+    ) {
+        var current = companyPaymentMethodsRepository
+            .findByCompanyId(company.getId());
+
+        var currentIds = current.stream()
+            .map(cpm -> cpm.getPaymentMethod().getId())
+            .collect(Collectors.toSet());
+
+        var incomingIds = new HashSet<>(newPaymentMethodIds);
+
+        current.stream()
+            .filter(cpm -> !incomingIds.contains(cpm.getPaymentMethod().getId()))
+            .forEach(companyPaymentMethodsRepository::delete);
+
+        incomingIds.stream()
+            .filter(id -> !currentIds.contains(id))
+            .forEach(id -> {
+                PaymentMethods pm = repository.findById(id).orElseThrow();
+                companyPaymentMethodsRepository.save(
+                    new CompanyPaymentMethods(company, pm)
+                );
+            });
+    }
+
 
 }

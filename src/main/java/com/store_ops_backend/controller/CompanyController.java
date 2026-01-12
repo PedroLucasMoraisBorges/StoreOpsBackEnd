@@ -33,16 +33,14 @@ public class CompanyController {
         return service.createCompany(data, user.getId());
     }
 
-    @PutMapping("/update")
-    public Company updateCompany(@RequestBody @Valid CreateCompanyDTO data, @AuthenticationPrincipal User user) {
-        // return service.updateCompany(data, user.getId());
-        return null;
+    @PutMapping("/update/{id}")
+    public CompanyResponseDTO updateCompany(@RequestBody @Valid CreateCompanyDTO data, @AuthenticationPrincipal User user, @PathVariable("id") String id) {
+        return service.updateCompany(id, data);
     }
 
     @GetMapping("/getCompany/{id}")
-    public Company getCompany(@PathVariable("id") String id) {
-        // return service.getCompanyById(id);
-        return null;
+    public CompanyResponseDTO getCompany(@PathVariable("id") String id) {
+        return service.getCompanyById(id);
     }
 
     @GetMapping("/getCompanys")

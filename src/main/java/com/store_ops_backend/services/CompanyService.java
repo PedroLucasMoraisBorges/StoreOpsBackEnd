@@ -35,8 +35,37 @@ public class CompanyService {
 
         paymentMethodService.createCompanyPaymentMethods(newCompany, data.paymentMethodIds());
 
-        System.out.println(newCompany.getId());
-        var paymentMethods = paymentMethodService.getCompanyPaymentMethods(newCompany.getId());
-        return new CompanyResponseDTO(newCompany, paymentMethods);
+        return getCompanyById(newCompany.getId());
+    }
+
+    public CompanyResponseDTO getCompanyById(String companyId) {
+        Company company = repository.findById(companyId).orElseThrow(() -> new RuntimeException("Company not found"));
+        var paymentMethods = paymentMethodService.getCompanyPaymentMethods(companyId);
+        return new CompanyResponseDTO(company, paymentMethods);
+    } 
+
+    public CompanyResponseDTO updateCompany(String companyId, CreateCompanyDTO data) {
+        Company company = repository.findById(companyId).orElseThrow(() -> new RuntimeException("Company not found"));
+
+        company.update(
+            data.name(),
+            data.type(),
+            data.address(),
+            data.phone(),
+            data.teamSize(),
+            data.formOfService(),
+            data.notifications().newOrder(),
+            data.notifications().weeklyReports(),
+            data.notifications().email(),
+            data.notifications().accounts()
+        );
+
+        paymentMethodService.syncCompanyPaymentMethods(
+            company,
+            data.paymentMethodIds()
+        );
+
+        repository.save(company);
+        return getCompanyById(company.getId());
     }
 }

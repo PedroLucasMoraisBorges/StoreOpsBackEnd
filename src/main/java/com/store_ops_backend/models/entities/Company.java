@@ -45,4 +45,30 @@ public class Company {
         this.notification_in_email = notification_in_email;
         this.notification_for_accounts = notification_for_accounts;
     }
+
+    public void update(
+        String name,
+        String type,
+        String address,
+        String phone,
+        String teamSize,
+        String formOfService,
+        boolean newOrder,
+        boolean weeklyReports,
+        boolean email,
+        boolean accounts
+    ) {
+        this.name = name;
+        this.type = type;
+        this.address = address;
+        this.phone = phone;
+        this.team_size = teamSize;
+        this.form_of_service = formOfService;
+
+        this.notification_new_order = newOrder;
+        this.weekly_reports = weeklyReports;
+        this.notification_in_email = email;
+        this.notification_for_accounts = accounts;
+    }
+
 }
