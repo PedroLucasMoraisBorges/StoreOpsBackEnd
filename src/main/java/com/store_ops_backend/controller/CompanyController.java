@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.store_ops_backend.models.dtos.CompanyResponseDTO;
 import com.store_ops_backend.models.dtos.CreateCompanyDTO;
-import com.store_ops_backend.models.entities.Company;
 import com.store_ops_backend.models.entities.User;
 import com.store_ops_backend.services.CompanyService;
 
@@ -43,9 +42,8 @@ public class CompanyController {
         return service.getCompanyById(id);
     }
 
-    @GetMapping("/getCompanys")
-    public List<Company> getCompanies(@RequestParam(value = "filter", defaultValue = "nenhum") String filter) {
-        // return service.getAllCompanies();
-        return null;
+    @GetMapping("/getUserCompanies")
+    public List<CompanyResponseDTO> getCompanies(@RequestParam(value = "filter", defaultValue = "nenhum") String filter, @AuthenticationPrincipal User user) {
+        return service.getAllUserCompanies(user.getId(), filter);
     }
 }

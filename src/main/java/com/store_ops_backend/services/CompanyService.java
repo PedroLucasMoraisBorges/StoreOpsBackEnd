@@ -1,5 +1,7 @@
 package com.store_ops_backend.services;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -67,5 +69,12 @@ public class CompanyService {
 
         repository.save(company);
         return getCompanyById(company.getId());
+    }
+
+    public List<CompanyResponseDTO> getAllUserCompanies(String userId, String filter) {
+        List<Company> companies = userCompanyService.getCompaniesByUserId(userId);
+        return companies.stream().map(company -> {
+            return getCompanyById(company.getId());
+        }).toList();
     }
 }
