@@ -5,6 +5,6 @@ import java.util.List;
 import com.store_ops_backend.models.entities.Company;
 
 public record CompanyResponseDTO(
-    Company company,
+    Company establishment,
     List<PaymentMethodDTO> paymentMethods
 ) {}
