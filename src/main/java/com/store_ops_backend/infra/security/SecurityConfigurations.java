@@ -57,7 +57,8 @@ public class SecurityConfigurations {
 
         config.setAllowedOrigins(List.of(
             "http://localhost:8081",
-            "http://localhost:4200"
+            "http://localhost:4200",
+            "https://id-preview--6c0bf2c0-e580-41cf-96cf-e709320deb94.lovable.app"
         ));
         config.setAllowedMethods(List.of(
             "GET", "POST", "PUT", "DELETE", "OPTIONS"
