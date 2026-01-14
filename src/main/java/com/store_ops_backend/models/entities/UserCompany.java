@@ -1,6 +1,7 @@
 package com.store_ops_backend.models.entities;
 
 import java.io.Serializable;
+import java.time.OffsetDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -16,7 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Table(name = "user_companies")
-@Entity(name = "user_companies")
+@Entity(name = "UserCompany")
 
 @Getter
 @NoArgsConstructor
@@ -29,6 +30,12 @@ public class UserCompany {
 
     @Column(nullable = false)
     private String role;
+
+    private Boolean status;
+
+    private String position;
+
+    private OffsetDateTime joined_at;
 
     @ManyToOne(optional = false)
     @MapsId("userId")

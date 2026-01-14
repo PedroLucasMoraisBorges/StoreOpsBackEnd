@@ -22,10 +22,11 @@ public class UserCompanyService {
 
     public List<Company> getCompaniesByUserId(String userId) {
         List<Company> companies = repository
-            .findByUser_Id(userId)
+            .findCompaniesByUserId(userId)
             .stream()
             .map(UserCompany::getCompany)
             .toList();
+        
 
         return companies;
     }
