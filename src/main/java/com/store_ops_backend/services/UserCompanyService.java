@@ -15,9 +15,14 @@ public class UserCompanyService {
     @Autowired
     UserCompanyRepository repository;
 
-    public void createUserCompany(User user, Company company, String role) {
-        UserCompany userCompany = new UserCompany(user, company, role);
+    public void createUserCompany(User user, Company company, String role, String position) {
+        UserCompany userCompany = new UserCompany(user, company, role, position);
         repository.save(userCompany);
+    }
+
+    public UserCompany createUserCompanyWithPosition(User user, Company company, String role, String position) {
+        UserCompany userCompany = new UserCompany(user, company, role, position);
+        return repository.save(userCompany);
     }
 
     public List<Company> getCompaniesByUserId(String userId) {
@@ -29,5 +34,27 @@ public class UserCompanyService {
         
 
         return companies;
+    }
+
+    public List<UserCompany> getUsersByCompanyId(String companyId) {
+        return repository.findUsersByCompanyId(companyId);
+    }
+
+    public UserCompany getUserCompany(String companyId, String userId) {
+        return repository
+            .findByCompanyIdAndUserId(companyId, userId)
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
+    }
+
+    public void deleteUserCompany(String companyId, String userId) {
+        repository.deleteByCompanyIdAndUserId(companyId, userId);
+    }
+
+    public void updateUserCompanyStatus(String companyId, String userId) {
+        repository.updateStatusByCompanyIdAndUserId(companyId, userId);
+    }
+
+    public UserCompany saveUserCompany(UserCompany userCompany) {
+        return repository.save(userCompany);
     }
 }

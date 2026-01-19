@@ -47,11 +47,26 @@ public class UserCompany {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    public UserCompany(User user, Company company, String role) {
+    public UserCompany(User user, Company company, String role, String position) {
         this.user = user;
         this.company = company;
         this.role = role;
+        this.position = position;
+        this.status = true;
+        this.joined_at = OffsetDateTime.now();
         this.id = new UserCompanyId(user.getId(), company.getId());
+    }
+
+    public void update(String role, String position, Boolean status) {
+        if (role != null && !role.isBlank()) {
+            this.role = role;
+        }
+        if (position != null && !position.isBlank()) {
+            this.position = position;
+        }
+        if (status != null) {
+            this.status = status;
+        }
     }
 }
 

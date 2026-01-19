@@ -42,6 +42,14 @@ public class User implements UserDetails {
         this.password = password;
         this.role = role;
     }
+
+    public void updateName(String name) {
+        this.name = name;
+    }
+
+    public void updateRole(UserRole role) {
+        this.role = role;
+    }
     
     @Override
     public String getUsername() {

@@ -33,4 +33,15 @@ public class People {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    public People(String name, String type, Company company, User user) {
+        this.name = name;
+        this.type = type;
+        this.company = company;
+        this.user = user;
+    }
+
+    public void updateName(String name) {
+        this.name = name;
+    }
 }

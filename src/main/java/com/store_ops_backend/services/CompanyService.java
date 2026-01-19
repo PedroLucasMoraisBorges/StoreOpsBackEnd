@@ -33,7 +33,7 @@ public class CompanyService {
         repository.save(newCompany);
         User user = authenticationService.loadUserById(userId);
         
-        userCompanyService.createUserCompany(user, newCompany, "ADMIN");
+        userCompanyService.createUserCompany(user, newCompany, "ADMIN", "ADMIN");
 
         paymentMethodService.createCompanyPaymentMethods(newCompany, data.paymentMethodIds());
 

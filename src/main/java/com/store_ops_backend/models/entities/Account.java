@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 
+
 @Table(name = "accounts")
 @Entity(name = "accounts")
 
@@ -38,4 +39,8 @@ public class Account {
     @ManyToOne(optional = false)
     @JoinColumn(name = "person_id", nullable = false)
     private People people;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 }
