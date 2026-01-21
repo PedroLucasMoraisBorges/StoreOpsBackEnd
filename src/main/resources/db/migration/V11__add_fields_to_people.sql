@@ -1,0 +1,4 @@
+ALTER TABLE people
+    ADD COLUMN address TEXT,
+    ADD COLUMN contact TEXT,
+    ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;

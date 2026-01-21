@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,6 +31,8 @@ public class AccountTransactions {
     private String origin;
     private BigDecimal amount;
     private String description;
+
+    @Column(name = "created_at")
     private OffsetDateTime created_at;
 
     @ManyToOne(optional = false)

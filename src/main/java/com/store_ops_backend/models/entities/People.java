@@ -1,5 +1,6 @@
 package com.store_ops_backend.models.entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -34,14 +35,50 @@ public class People {
     @JoinColumn(name = "user_id")
     private User user;
 
+    private String address;
+    private String contact;
+
+    @Column(name = "is_active")
+    private Boolean is_active;
+
     public People(String name, String type, Company company, User user) {
         this.name = name;
         this.type = type;
         this.company = company;
         this.user = user;
+        this.is_active = true;
     }
 
-    public void updateName(String name) {
+    public People(
+        String name,
+        String type,
+        Company company,
+        User user,
+        String address,
+        String contact,
+        Boolean isActive
+    ) {
         this.name = name;
+        this.type = type;
+        this.company = company;
+        this.user = user;
+        this.address = address;
+        this.contact = contact;
+        this.is_active = isActive == null ? true : isActive;
+    }
+
+    public void update(String name, String address, String contact, Boolean isActive) {
+        if (name != null && !name.isBlank()) {
+            this.name = name;
+        }
+        if (address != null) {
+            this.address = address;
+        }
+        if (contact != null) {
+            this.contact = contact;
+        }
+        if (isActive != null) {
+            this.is_active = isActive;
+        }
     }
 }

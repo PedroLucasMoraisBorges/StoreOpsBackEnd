@@ -40,6 +40,9 @@ public class EmployeeService {
     private UserCompanyService userCompanyService;
 
     @Autowired
+    private CustomerService customerService;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     public EmployeeResponseDTO createEmployee(CreateEmployeeDTO data, String companyId) {
@@ -61,6 +64,8 @@ public class EmployeeService {
 
         Account account = new Account(null, "OPEN", OffsetDateTime.now(), null, people, company);
         accountRepository.save(account);
+
+        customerService.createCustomerForEmployee(company, user, name);
 
         String companyRole = data.role() == null || data.role().isBlank() ? "USER" : data.role();
         UserCompany userCompany = userCompanyService.createUserCompanyWithPosition(
@@ -91,7 +96,7 @@ public class EmployeeService {
         if (data.name() != null && !data.name().isBlank()) {
             user.updateName(data.name());
             peopleRepository.findByUserIdAndCompanyId(userId, companyId)
-                .ifPresent(people -> people.updateName(data.name()));
+                .ifPresent(people -> people.update(data.name(), null, null, null));
         }
 
         if (data.role() != null && !data.role().isBlank()) {

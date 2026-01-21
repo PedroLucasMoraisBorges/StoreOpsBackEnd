@@ -1,5 +1,6 @@
 package com.store_ops_backend.repositories;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,5 +19,42 @@ public interface PeopleRepository extends JpaRepository<People, String> {
     Optional<People> findByUserIdAndCompanyId(
         @Param("userId") String userId,
         @Param("companyId") String companyId
+    );
+
+    @Query("""
+        select p
+        from people p
+        where p.company.id = :companyId
+        and p.type = :type
+    """)
+    List<People> findByCompanyIdAndType(
+        @Param("companyId") String companyId,
+        @Param("type") String type
+    );
+
+    @Query("""
+        select p
+        from people p
+        where p.company.id = :companyId
+        and p.id = :personId
+        and p.type = :type
+    """)
+    Optional<People> findByCompanyIdAndPersonIdAndType(
+        @Param("companyId") String companyId,
+        @Param("personId") String personId,
+        @Param("type") String type
+    );
+
+    @Query("""
+        select p
+        from people p
+        where p.company.id = :companyId
+        and p.user.id = :userId
+        and p.type = :type
+    """)
+    Optional<People> findByUserIdAndCompanyIdAndType(
+        @Param("userId") String userId,
+        @Param("companyId") String companyId,
+        @Param("type") String type
     );
 }
