@@ -14,6 +14,8 @@ import com.store_ops_backend.models.entities.People;
 import com.store_ops_backend.models.entities.User;
 import com.store_ops_backend.repositories.AccountTransactionsRepository;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @Service
 public class AccountTransactionService {
     @Autowired
@@ -31,7 +33,7 @@ public class AccountTransactionService {
     }
 
     public List<TransactionResponseDTO> listTransactions(String companyId, String customerId) {
-        People customer = customerService.findCustomerPerson(companyId, customerId);
+        People customer = customerService.findPersonByCustomerOrEmployee(companyId, customerId);
         Account account = customerService.findCustomerAccount(companyId, customer.getId());
 
         return transactionsRepository
@@ -52,10 +54,10 @@ public class AccountTransactionService {
             throw new RuntimeException("Amount must be greater than zero");
         }
 
-        People customer = customerService.findCustomerPerson(companyId, customerId);
-        Account account = customerService.findCustomerAccount(companyId, customer.getId());
+        People person = customerService.findPersonByCustomerOrEmployee(companyId, customerId);
 
-        System.out.println("usidhfuiasdhfuiagfolaefgeayuife");
+        Account account = customerService.findCustomerAccount(companyId, person.getId());
+
         AccountTransactions transaction = new AccountTransactions(
             null,
             origin,

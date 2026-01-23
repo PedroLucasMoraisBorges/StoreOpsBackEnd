@@ -19,4 +19,5 @@ public interface AccountRepository extends JpaRepository<Account, String> {
         @Param("personId") String personId,
         @Param("companyId") String companyId
     );
+
 }

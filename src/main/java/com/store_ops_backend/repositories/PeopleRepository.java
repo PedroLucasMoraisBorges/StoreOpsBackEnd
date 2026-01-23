@@ -25,11 +25,9 @@ public interface PeopleRepository extends JpaRepository<People, String> {
         select p
         from people p
         where p.company.id = :companyId
-        and p.type = :type
     """)
     List<People> findByCompanyIdAndType(
-        @Param("companyId") String companyId,
-        @Param("type") String type
+        @Param("companyId") String companyId
     );
 
     @Query("""
@@ -37,11 +35,22 @@ public interface PeopleRepository extends JpaRepository<People, String> {
         from people p
         where p.company.id = :companyId
         and p.id = :personId
-        and p.type = :type
     """)
     Optional<People> findByCompanyIdAndPersonIdAndType(
         @Param("companyId") String companyId,
-        @Param("personId") String personId,
+        @Param("personId") String personId
+    );
+
+    @Query("""
+        select p
+        from people p
+        where p.company.id = :companyId
+        and p.user.id = :userId
+        and p.type = :type
+    """)
+    Optional<People> findByCompanyIdAndEmployeeIdAndType(
+        @Param("companyId") String companyId,
+        @Param("userId") String userId,
         @Param("type") String type
     );
 

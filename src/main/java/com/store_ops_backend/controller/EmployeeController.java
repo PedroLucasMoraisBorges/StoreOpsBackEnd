@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.store_ops_backend.models.dtos.CreateEmployeeDTO;
 import com.store_ops_backend.models.dtos.EmployeeResponseDTO;
+import com.store_ops_backend.models.dtos.TransactionResponseDTO;
 import com.store_ops_backend.models.dtos.UpdateEmployeeDTO;
 import com.store_ops_backend.services.EmployeeService;
 
@@ -67,5 +68,13 @@ public class EmployeeController {
         @PathVariable("userId") String userId
     ) {
         service.updateEmployeeStatus(companyId, userId);
+    }
+
+    @GetMapping("/transactions/{companyId}/{userId}")
+    public List<TransactionResponseDTO> getEmployeeAccountTransactions(
+        @PathVariable("companyId") String companyId,
+        @PathVariable("userId") String userId
+    ) {
+        return service.getEmployeeAccountTransactions(companyId, userId);
     }
 }

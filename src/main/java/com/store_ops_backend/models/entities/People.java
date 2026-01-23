@@ -38,6 +38,10 @@ public class People {
     private String address;
     private String contact;
 
+    @ManyToOne
+    @JoinColumn(name = "employee_person_id")
+    private People employeePerson;
+
     @Column(name = "is_active")
     private Boolean is_active;
 
@@ -79,6 +83,12 @@ public class People {
         }
         if (isActive != null) {
             this.is_active = isActive;
+        }
+    }
+
+    public void updateEmployeePerson(People employeePerson) {
+        if (employeePerson != null) {
+            this.employeePerson = employeePerson;
         }
     }
 }

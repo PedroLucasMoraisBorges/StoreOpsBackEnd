@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.store_ops_backend.models.dtos.CreateEmployeeDTO;
 import com.store_ops_backend.models.dtos.EmployeeResponseDTO;
+import com.store_ops_backend.models.dtos.TransactionResponseDTO;
 import com.store_ops_backend.models.dtos.UpdateEmployeeDTO;
 import com.store_ops_backend.models.entities.Account;
 import com.store_ops_backend.models.entities.Company;
@@ -17,6 +18,7 @@ import com.store_ops_backend.models.entities.People;
 import com.store_ops_backend.models.entities.User;
 import com.store_ops_backend.models.entities.UserCompany;
 import com.store_ops_backend.models.entities.UserRole;
+import com.store_ops_backend.repositories.AccountTransactionsRepository;
 import com.store_ops_backend.repositories.AccountRepository;
 import com.store_ops_backend.repositories.CompanyRepository;
 import com.store_ops_backend.repositories.PeopleRepository;
@@ -45,6 +47,9 @@ public class EmployeeService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AccountTransactionsRepository transactionsRepository;
+
     public EmployeeResponseDTO createEmployee(CreateEmployeeDTO data, String companyId) {
         if (this.userRepository.findBylogin(data.login()) != null) {
             throw new RuntimeException("Login already exists");
@@ -65,7 +70,6 @@ public class EmployeeService {
         Account account = new Account(null, "OPEN", OffsetDateTime.now(), null, people, company);
         accountRepository.save(account);
 
-        customerService.createCustomerForEmployee(company, user, name);
 
         String companyRole = data.role() == null || data.role().isBlank() ? "USER" : data.role();
         UserCompany userCompany = userCompanyService.createUserCompanyWithPosition(
@@ -107,6 +111,26 @@ public class EmployeeService {
         userCompanyService.saveUserCompany(userCompany);
 
         return toEmployeeResponse(userCompany);
+    }
+
+    public List<TransactionResponseDTO> getEmployeeAccountTransactions(String companyId, String userId) {
+        People employeePerson = peopleRepository
+            .findByUserIdAndCompanyIdAndType(userId, companyId, "EMPLOYEE")
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        Account account = customerService.findCustomerAccount(companyId, employeePerson.getId());
+        return transactionsRepository
+            .findByAccountIdOrderByCreatedAtDesc(account.getId())
+            .stream()
+            .map(transaction -> new TransactionResponseDTO(
+                transaction.getId(),
+                transaction.getOrigin(),
+                transaction.getAmount(),
+                transaction.getDescription(),
+                transaction.getCreated_at(),
+                transaction.getUser().getId()
+            ))
+            .toList();
     }
 
     @Transactional

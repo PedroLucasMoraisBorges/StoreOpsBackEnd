@@ -18,9 +18,12 @@ import com.store_ops_backend.repositories.AccountRepository;
 import com.store_ops_backend.repositories.CompanyRepository;
 import com.store_ops_backend.repositories.PeopleRepository;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @Service
 public class CustomerService {
     private static final String CUSTOMER_TYPE = "CLIENT";
+    private static final String EMPLOYEE_TYPE = "EMPLOYEE";
 
     @Autowired
     private PeopleRepository peopleRepository;
@@ -55,10 +58,9 @@ public class CustomerService {
     }
 
     @Transactional
-    public CustomerResponseDTO createCustomerForEmployee(Company company, User user, String name) {
+    public People createCustomerForEmployee(Company company, User user, String name) {
         return peopleRepository
             .findByUserIdAndCompanyIdAndType(user.getId(), company.getId(), CUSTOMER_TYPE)
-            .map(this::toResponse)
             .orElseGet(() -> {
                 People people = new People(
                     name,
@@ -72,13 +74,13 @@ public class CustomerService {
                 peopleRepository.save(people);
                 Account account = new Account(null, "OPEN", OffsetDateTime.now(), null, people, company);
                 accountRepository.save(account);
-                return toResponse(people);
+                return people;
             });
     }
 
     public List<CustomerResponseDTO> getAllCustomers(String companyId) {
         return peopleRepository
-            .findByCompanyIdAndType(companyId, CUSTOMER_TYPE)
+            .findByCompanyIdAndType(companyId)
             .stream()
             .map(this::toResponse)
             .toList();
@@ -86,7 +88,7 @@ public class CustomerService {
 
     public CustomerResponseDTO getCustomerById(String companyId, String customerId) {
         People people = peopleRepository
-            .findByCompanyIdAndPersonIdAndType(companyId, customerId, CUSTOMER_TYPE)
+            .findByCompanyIdAndPersonIdAndType(companyId, customerId)
             .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         return toResponse(people);
@@ -95,24 +97,40 @@ public class CustomerService {
     @Transactional
     public CustomerResponseDTO updateCustomer(String companyId, String customerId, UpdateCustomerDTO data) {
         People people = peopleRepository
-            .findByCompanyIdAndPersonIdAndType(companyId, customerId, CUSTOMER_TYPE)
+            .findByCompanyIdAndPersonIdAndType(companyId, customerId)
             .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         people.update(data.name(), data.address(), data.contact(), data.isActive());
         return toResponse(people);
     }
 
-    public People findCustomerPerson(String companyId, String customerId) {
+    public People findPersonByCustomerOrEmployee(
+            String companyId,
+            String personOrEmployeeId
+    ) {
         return peopleRepository
-            .findByCompanyIdAndPersonIdAndType(companyId, customerId, CUSTOMER_TYPE)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
+            .findByCompanyIdAndPersonIdAndType(companyId, personOrEmployeeId)
+            .or(() ->
+                peopleRepository.findByCompanyIdAndEmployeeIdAndType(
+                    companyId,
+                    personOrEmployeeId,
+                    EMPLOYEE_TYPE
+                )
+            )
+            .orElseThrow(() ->
+                new EntityNotFoundException(
+                    "Person not found as CUSTOMER nor EMPLOYEE for id=" + personOrEmployeeId
+                )
+            );
     }
+
 
     public Account findCustomerAccount(String companyId, String personId) {
         return accountRepository
             .findByPersonIdAndCompanyId(personId, companyId)
             .orElseThrow(() -> new RuntimeException("Account not found"));
     }
+
 
     private CustomerResponseDTO toResponse(People people) {
         return new CustomerResponseDTO(
