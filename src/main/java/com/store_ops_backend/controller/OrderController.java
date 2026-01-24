@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.store_ops_backend.models.dtos.AddOrderItemsDTO;
 import com.store_ops_backend.models.dtos.CreateOrderDTO;
+import com.store_ops_backend.models.dtos.OrderCustomerResponseDTO;
 import com.store_ops_backend.models.dtos.OrderResponseDTO;
 import com.store_ops_backend.models.dtos.UpdateOrderDTO;
 import com.store_ops_backend.models.dtos.UpdateOrderStatusDTO;
@@ -46,6 +47,14 @@ public class OrderController {
         @PathVariable("orderId") String orderId
     ) {
         return orderService.getOrderById(companyId, orderId);
+    }
+
+    @GetMapping("/getByCustomer/{companyId}/{customerId}")
+    public List<OrderCustomerResponseDTO> getOrdersByCustomer(
+        @PathVariable("companyId") String companyId,
+        @PathVariable("customerId") String customerId
+    ) {
+        return orderService.getOrdersByCustomer(companyId, customerId);
     }
 
     @PutMapping("/update/{companyId}/{orderId}")

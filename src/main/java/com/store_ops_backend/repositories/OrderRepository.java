@@ -28,4 +28,16 @@ public interface OrderRepository extends JpaRepository<Order, String> {
         @Param("companyId") String companyId,
         @Param("orderId") String orderId
     );
+
+    @Query("""
+        select o
+        from orders o
+        where o.company.id = :companyId
+        and o.customer.id = :customerId
+        order by o.createdAt desc
+    """)
+    List<Order> findByCompanyIdAndCustomerId(
+        @Param("companyId") String companyId,
+        @Param("customerId") String customerId
+    );
 }
