@@ -40,4 +40,54 @@ public interface OrderRepository extends JpaRepository<Order, String> {
         @Param("companyId") String companyId,
         @Param("customerId") String customerId
     );
+
+    @Query("""
+        select o
+        from orders o
+        where o.company.id = :companyId
+        and o.createdAt between :dateFrom and :dateTo
+        order by o.createdAt desc
+    """)
+    List<Order> findByCompanyIdAndCreatedAtBetween(
+        @Param("companyId") String companyId,
+        @Param("dateFrom") java.time.OffsetDateTime dateFrom,
+        @Param("dateTo") java.time.OffsetDateTime dateTo
+    );
+
+    @Query("""
+        select o
+        from orders o
+        where o.company.id = :companyId
+        and o.attendantUserId = :userId
+        and o.createdAt between :dateFrom and :dateTo
+        order by o.createdAt desc
+    """)
+    List<Order> findByCompanyIdAndAttendantUserIdAndCreatedAtBetween(
+        @Param("companyId") String companyId,
+        @Param("userId") String userId,
+        @Param("dateFrom") java.time.OffsetDateTime dateFrom,
+        @Param("dateTo") java.time.OffsetDateTime dateTo
+    );
+
+    @Query("""
+        select o
+        from orders o
+        where o.company.id = :companyId
+        and o.status = 'COMPLETED'
+        and o.createdAt between :dateFrom and :dateTo
+        order by o.createdAt desc
+    """)
+    List<Order> findCompletedByCompanyIdAndCreatedAtBetween(
+        @Param("companyId") String companyId,
+        @Param("dateFrom") java.time.OffsetDateTime dateFrom,
+        @Param("dateTo") java.time.OffsetDateTime dateTo
+    );
+
+    @Query("""
+        select o
+        from orders o
+        where o.company.id = :companyId
+        order by o.createdAt desc
+    """)
+    List<Order> findRecentByCompanyId(org.springframework.data.domain.Pageable pageable);
 }
