@@ -69,7 +69,7 @@ public class DashboardService {
 
         int totalCustomers = peopleRepository.findByCompanyIdAndType(companyId).size();
 
-        List<Order> ordersThisMonth = orderRepository.findByCompanyIdAndCreatedAtBetween(companyId, monthStart, monthEnd);
+        List<Order> ordersThisMonth = orderRepository.findByCompanyIdAndScheduledAtBetween(companyId, monthStart, monthEnd);
         int monthOrdersCount = ordersThisMonth.size();
         BigDecimal monthRevenue = sumCompletedOrders(ordersThisMonth);
 
@@ -103,7 +103,7 @@ public class DashboardService {
         Map<LocalDate, BigDecimal> totalsByDay = new HashMap<>();
 
         for (Order order : completedOrders) {
-            LocalDate day = order.getCreatedAt().atZoneSameInstant(zone).toLocalDate();
+            LocalDate day = order.getScheduledAt().atZoneSameInstant(zone).toLocalDate();
             BigDecimal total = orderTotal(order);
             totalsByDay.merge(day, total, BigDecimal::add);
         }
@@ -158,7 +158,8 @@ public class DashboardService {
                 order.getCustomer().getName(),
                 order.getStatus(),
                 scale(orderTotal(order)),
-                order.getCreatedAt()
+                order.getCreatedAt(),
+                order.getScheduledAt()
             ))
             .toList();
     }

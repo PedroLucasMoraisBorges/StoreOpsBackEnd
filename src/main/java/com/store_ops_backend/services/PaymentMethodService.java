@@ -54,6 +54,17 @@ public class PaymentMethodService {
         return paymentMethodDTOs;
     }   
 
+    public List<PaymentMethodDTO> getAllPaymentMethods() {
+        return repository.findAll()
+            .stream()
+            .map(method -> new PaymentMethodDTO(
+                method.getId(),
+                method.getName(),
+                method.getCode()
+            ))
+            .toList();
+    }
+
     @Transactional
     public void syncCompanyPaymentMethods(
             Company company,

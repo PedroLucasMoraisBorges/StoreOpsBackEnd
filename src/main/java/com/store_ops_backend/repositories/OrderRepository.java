@@ -45,10 +45,10 @@ public interface OrderRepository extends JpaRepository<Order, String> {
         select o
         from orders o
         where o.company.id = :companyId
-        and o.createdAt between :dateFrom and :dateTo
-        order by o.createdAt desc
+        and o.scheduledAt between :dateFrom and :dateTo
+        order by o.scheduledAt desc
     """)
-    List<Order> findByCompanyIdAndCreatedAtBetween(
+    List<Order> findByCompanyIdAndScheduledAtBetween(
         @Param("companyId") String companyId,
         @Param("dateFrom") java.time.OffsetDateTime dateFrom,
         @Param("dateTo") java.time.OffsetDateTime dateTo
@@ -74,8 +74,8 @@ public interface OrderRepository extends JpaRepository<Order, String> {
         from orders o
         where o.company.id = :companyId
         and o.status = 'COMPLETED'
-        and o.createdAt between :dateFrom and :dateTo
-        order by o.createdAt desc
+        and o.scheduledAt between :dateFrom and :dateTo
+        order by o.scheduledAt desc
     """)
     List<Order> findCompletedByCompanyIdAndCreatedAtBetween(
         @Param("companyId") String companyId,
@@ -87,7 +87,7 @@ public interface OrderRepository extends JpaRepository<Order, String> {
         select o
         from orders o
         where o.company.id = :companyId
-        order by o.createdAt desc
+        order by o.scheduledAt desc
     """)
     List<Order> findRecentByCompanyId(org.springframework.data.domain.Pageable pageable);
 }

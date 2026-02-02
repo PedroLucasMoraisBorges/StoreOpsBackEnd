@@ -13,7 +13,6 @@ import com.store_ops_backend.models.dtos.OrderItemDTO;
 import com.store_ops_backend.models.dtos.OrderItemResponseDTO;
 import com.store_ops_backend.models.dtos.OrderResponseDTO;
 import com.store_ops_backend.models.dtos.CreateOrderDTO;
-import com.store_ops_backend.models.dtos.OrderCustomerResponseDTO;
 import com.store_ops_backend.models.dtos.UpdateOrderDTO;
 import com.store_ops_backend.models.entities.Account;
 import com.store_ops_backend.models.entities.Company;
@@ -97,11 +96,11 @@ public class OrderService {
         return toResponse(order, orderItemRepository.findByOrderId(order.getId()));
     }
 
-    public List<OrderCustomerResponseDTO> getOrdersByCustomer(String companyId, String customerId) {
+    public List<OrderResponseDTO> getOrdersByCustomer(String companyId, String customerId) {
         return orderRepository
             .findByCompanyIdAndCustomerId(companyId, customerId)
             .stream()
-            .map(order -> toCustomerResponse(order, orderItemRepository.findByOrderId(order.getId())))
+            .map(order -> toResponse(order, orderItemRepository.findByOrderId(order.getId())))
             .toList();
     }
 
@@ -339,22 +338,4 @@ public class OrderService {
         );
     }
 
-    private OrderCustomerResponseDTO toCustomerResponse(Order order, List<OrderItem> items) {
-        String attendantUserId = order.getAttendant() != null
-            ? order.getAttendant().getUser().getId()
-            : order.getAttendantUserId();
-
-        return new OrderCustomerResponseDTO(
-            order.getId(),
-            attendantUserId,
-            order.getType(),
-            order.getScheduledAt(),
-            order.getDeliveryAddress(),
-            order.getNotes(),
-            order.getStatus(),
-            order.getCreatedAt(),
-            order.getUpdatedAt(),
-            items.stream().map(this::toItemResponse).toList()
-        );
-    }
 }

@@ -8,5 +8,6 @@ public record DashboardRecentOrderDTO(
     String customerName,
     String status,
     BigDecimal total,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    OffsetDateTime scheduledAt
 ) {}

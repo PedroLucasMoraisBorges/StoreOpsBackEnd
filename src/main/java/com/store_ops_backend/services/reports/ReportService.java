@@ -74,7 +74,11 @@ public class ReportService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             totalValue = totalValue.add(orderTotal);
 
-            pdf.addSectionTitle("Pedido #" + order.getId());
+            OffsetDateTime referenceDate = order.getScheduledAt() != null
+                ? order.getScheduledAt()
+                : order.getCreatedAt();
+            String customerShortName = shortName(order.getCustomer().getName());
+            pdf.addSectionTitle(customerShortName + " • " + formatDateTimeLabel(referenceDate));
             String attendantName = order.getAttendant() != null
                 ? order.getAttendant().getUser().getName()
                 : "Não informado";
@@ -253,6 +257,26 @@ public class ReportService {
 
     private String formatDateTime(OffsetDateTime dateTime) {
         return dateTime == null ? "-" : dateTime.format(DATE_TIME_FORMAT);
+    }
+
+    private String formatDateTimeLabel(OffsetDateTime dateTime) {
+        if (dateTime == null) {
+            return "-";
+        }
+        String day = dateTime.format(DATE_FORMAT);
+        String time = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+        return day + " às " + time;
+    }
+
+    private String shortName(String name) {
+        if (name == null || name.isBlank()) {
+            return "Cliente";
+        }
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) {
+            return parts[0];
+        }
+        return parts[0] + " " + parts[1];
     }
 
     private String formatMoney(BigDecimal value) {

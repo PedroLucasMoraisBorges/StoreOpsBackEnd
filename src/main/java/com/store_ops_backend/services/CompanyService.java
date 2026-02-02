@@ -43,7 +43,8 @@ public class CompanyService {
     public CompanyResponseDTO getCompanyById(String companyId) {
         Company company = repository.findById(companyId).orElseThrow(() -> new RuntimeException("Company not found"));
         var paymentMethods = paymentMethodService.getCompanyPaymentMethods(companyId);
-        return new CompanyResponseDTO(company, paymentMethods);
+        var allPaymentMethods = paymentMethodService.getAllPaymentMethods();
+        return new CompanyResponseDTO(company, paymentMethods, allPaymentMethods);
     } 
 
     public CompanyResponseDTO updateCompany(String companyId, CreateCompanyDTO data) {

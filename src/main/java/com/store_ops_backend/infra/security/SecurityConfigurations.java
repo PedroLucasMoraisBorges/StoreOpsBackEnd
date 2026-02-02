@@ -55,9 +55,11 @@ public class SecurityConfigurations {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
-            "http://localhost:8081",
-            "http://localhost:4200",
+        config.setAllowedOriginPatterns(List.of(
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "http://192.168.*:*",
+            "http://10.*.*.*:*",
             "https://id-preview--6c0bf2c0-e580-41cf-96cf-e709320deb94.lovable.app"
         ));
         config.setAllowedMethods(List.of(
