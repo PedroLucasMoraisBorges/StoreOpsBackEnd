@@ -4,8 +4,10 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.store_ops_backend.models.entities.Order;
 
@@ -90,4 +92,12 @@ public interface OrderRepository extends JpaRepository<Order, String> {
         order by o.scheduledAt desc
     """)
     List<Order> findRecentByCompanyId(org.springframework.data.domain.Pageable pageable);
+
+    @Modifying
+    @Transactional
+    @Query("""
+        delete from orders o
+        where o.company.id = :companyId
+    """)
+    void deleteByCompanyId(@Param("companyId") String companyId);
 }

@@ -41,7 +41,6 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity register(@RequestBody @Valid RegisterDTO data) {
-        System.out.println("kjbvhjkdfsbgldfvgfgsdfgsdf");
         return this.userService.register(data);
     }
 }

@@ -52,7 +52,7 @@ public class ReportService {
     public byte[] buildOrdersReport(String companyId, LocalDate dateFrom, LocalDate dateTo) {
         Company company = loadCompany(companyId);
         PeriodRange period = PeriodRange.of(dateFrom, dateTo);
-        List<Order> orders = orderRepository.findByCompanyIdAndCreatedAtBetween(
+        List<Order> orders = orderRepository.findByCompanyIdAndScheduledAtBetween(
             companyId,
             period.start(),
             period.end()

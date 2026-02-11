@@ -4,12 +4,20 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.store_ops_backend.models.dtos.CompanyResponseDTO;
 import com.store_ops_backend.models.dtos.CreateCompanyDTO;
 import com.store_ops_backend.models.entities.Company;
 import com.store_ops_backend.models.entities.User;
+import com.store_ops_backend.models.entities.UserCompany;
 import com.store_ops_backend.repositories.CompanyRepository;
+import com.store_ops_backend.repositories.CompanyPaymentMethodsRepository;
+import com.store_ops_backend.repositories.OrderRepository;
+import com.store_ops_backend.repositories.AccountRepository;
+import com.store_ops_backend.repositories.AccountTransactionsRepository;
+import com.store_ops_backend.repositories.PeopleRepository;
+import com.store_ops_backend.repositories.UserCompanyRepository;
 
 @Service
 public class CompanyService {
@@ -25,6 +33,23 @@ public class CompanyService {
     @Autowired
     private AuthenticationService authenticationService;
 
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private AccountTransactionsRepository accountTransactionsRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private PeopleRepository peopleRepository;
+
+    @Autowired
+    private UserCompanyRepository userCompanyRepository;
+
+    @Autowired
+    private CompanyPaymentMethodsRepository companyPaymentMethodsRepository;
 
     public CompanyResponseDTO createCompany(CreateCompanyDTO data, String userId) {
         Company newCompany = new Company(data.name(), data.type(), data.address(), data.phone(), data.teamSize(), data.formOfService(),
@@ -77,5 +102,21 @@ public class CompanyService {
         return companies.stream().map(company -> {
             return getCompanyById(company.getId());
         }).toList();
+    }
+
+    @Transactional
+    public void deleteCompany(String companyId, String userId) {
+        UserCompany userCompany = userCompanyService.getUserCompany(companyId, userId);
+        if (userCompany.getRole() == null || !userCompany.getRole().equalsIgnoreCase("ADMIN")) {
+            throw new RuntimeException("User not allowed");
+        }
+
+        orderRepository.deleteByCompanyId(companyId);
+        accountTransactionsRepository.deleteByCompanyId(companyId);
+        accountRepository.deleteByCompanyId(companyId);
+        peopleRepository.deleteByCompanyId(companyId);
+        userCompanyRepository.deleteByCompanyId(companyId);
+        companyPaymentMethodsRepository.deleteByCompanyId(companyId);
+        repository.deleteById(companyId);
     }
 }

@@ -8,10 +8,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
 
 import com.store_ops_backend.models.dtos.CompanyResponseDTO;
 import com.store_ops_backend.models.dtos.CreateCompanyDTO;
@@ -45,5 +47,11 @@ public class CompanyController {
     @GetMapping("/getUserCompanies")
     public List<CompanyResponseDTO> getCompanies(@RequestParam(value = "filter", defaultValue = "nenhum") String filter, @AuthenticationPrincipal User user) {
         return service.getAllUserCompanies(user.getId(), filter);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteCompany(@PathVariable("id") String id, @AuthenticationPrincipal User user) {
+        service.deleteCompany(id, user.getId());
+        return ResponseEntity.noContent().build();
     }
 }

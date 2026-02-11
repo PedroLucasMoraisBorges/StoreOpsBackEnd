@@ -18,12 +18,14 @@ public class UserService {
     private UserRepository userRepository;
 
     public ResponseEntity register(@RequestBody @Valid RegisterDTO data) {
+        System.out.println("Registering user: " + data.login());
         if (this.userRepository.findBylogin(data.login()) != null) return ResponseEntity.badRequest().build();
 
         String encryptPassword = new BCryptPasswordEncoder().encode(data.password());
         User newUser = new User(data.login(), data.name(), encryptPassword, data.role());
         this.userRepository.save(newUser);
 
+        System.out.println("User registered successfully: " + newUser.getLogin());
         return ResponseEntity.ok().build();
     }
 }

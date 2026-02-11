@@ -52,6 +52,14 @@ public interface UserCompanyRepository extends JpaRepository<UserCompany, String
     @Modifying
     @Transactional
     @Query("""
+        delete from UserCompany uc
+        where uc.id.companyId = :companyId
+    """)
+    void deleteByCompanyId(@Param("companyId") String companyId);
+
+    @Modifying
+    @Transactional
+    @Query("""
         update UserCompany uc
         set uc.status = case
                 when uc.status = true then false
