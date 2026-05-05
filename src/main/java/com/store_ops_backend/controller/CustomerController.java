@@ -20,6 +20,7 @@ import com.store_ops_backend.models.dtos.UpdateCustomerDTO;
 import com.store_ops_backend.models.entities.User;
 import com.store_ops_backend.services.AccountTransactionService;
 import com.store_ops_backend.services.CustomerService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("customers")
@@ -32,7 +33,7 @@ public class CustomerController {
 
     @PostMapping("/create/{companyId}")
     public CustomerResponseDTO createCustomer(
-        @RequestBody CreateCustomerDTO data,
+        @RequestBody @Valid CreateCustomerDTO data,
         @PathVariable("companyId") String companyId
     ) {
         return customerService.createCustomer(data, companyId);
@@ -62,7 +63,7 @@ public class CustomerController {
 
     @PostMapping("/debit/{companyId}/{customerId}")
     public TransactionResponseDTO createDebit(
-        @RequestBody CreateTransactionDTO data,
+        @RequestBody @Valid CreateTransactionDTO data,
         @PathVariable("companyId") String companyId,
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
@@ -72,7 +73,7 @@ public class CustomerController {
 
     @PostMapping("/payment/{companyId}/{customerId}")
     public TransactionResponseDTO createPayment(
-        @RequestBody CreateTransactionDTO data,
+        @RequestBody @Valid CreateTransactionDTO data,
         @PathVariable("companyId") String companyId,
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user

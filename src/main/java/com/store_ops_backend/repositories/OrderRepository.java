@@ -93,6 +93,34 @@ public interface OrderRepository extends JpaRepository<Order, String> {
     """)
     List<Order> findRecentByCompanyId(org.springframework.data.domain.Pageable pageable);
 
+    @Query("""
+        select o
+        from orders o
+        where o.company.id = :companyId
+        and o.attendantUserId is not null
+        and o.scheduledAt between :dateFrom and :dateTo
+        order by o.scheduledAt desc
+    """)
+    List<Order> findEncomendasByCompanyIdAndScheduledAtBetween(
+        @Param("companyId") String companyId,
+        @Param("dateFrom") java.time.OffsetDateTime dateFrom,
+        @Param("dateTo") java.time.OffsetDateTime dateTo
+    );
+
+    @Query("""
+        select o
+        from orders o
+        where o.company.id = :companyId
+        and o.attendantUserId is null
+        and o.createdAt between :dateFrom and :dateTo
+        order by o.createdAt desc
+    """)
+    List<Order> findOnlineOrdersByCompanyIdAndCreatedAtBetween(
+        @Param("companyId") String companyId,
+        @Param("dateFrom") java.time.OffsetDateTime dateFrom,
+        @Param("dateTo") java.time.OffsetDateTime dateTo
+    );
+
     @Modifying
     @Transactional
     @Query("""

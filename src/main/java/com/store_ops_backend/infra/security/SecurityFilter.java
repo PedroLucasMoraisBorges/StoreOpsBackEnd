@@ -39,8 +39,11 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     private String recoverToken(HttpServletRequest request) {
         var authHeader = request.getHeader("Authorization");
-        if (authHeader == null) return null;
-        return authHeader.replace("Bearer ", "");
+        if (authHeader != null && !authHeader.isBlank()) {
+            return authHeader.replace("Bearer ", "");
+        }
+        // Fallback for SSE subscriptions: EventSource can't set custom headers
+        return request.getParameter("token");
     }
     
 }

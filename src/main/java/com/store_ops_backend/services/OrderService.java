@@ -24,6 +24,7 @@ import com.store_ops_backend.repositories.AccountRepository;
 import com.store_ops_backend.repositories.CompanyRepository;
 import com.store_ops_backend.repositories.OrderItemRepository;
 import com.store_ops_backend.repositories.OrderRepository;
+import com.store_ops_backend.repositories.PaymentMethodRepository;
 import com.store_ops_backend.repositories.PeopleRepository;
 
 @Service
@@ -45,6 +46,9 @@ public class OrderService {
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private PaymentMethodRepository paymentMethodRepository;
 
     @Autowired
     private UserCompanyService userCompanyService;
@@ -168,6 +172,20 @@ public class OrderService {
         return toResponse(order, orderItemRepository.findByOrderId(order.getId()));
     }
 
+    @Transactional
+    public OrderResponseDTO recordPayment(String companyId, String orderId, String paymentMethodId) {
+        Order order = orderRepository.findByCompanyIdAndOrderId(companyId, orderId)
+            .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        com.store_ops_backend.models.entities.PaymentMethods paymentMethod =
+            paymentMethodRepository.findById(paymentMethodId)
+                .orElseThrow(() -> new RuntimeException("Payment method not found"));
+
+        order.recordPayment(paymentMethod);
+        orderRepository.save(order);
+        return toResponse(order, orderItemRepository.findByOrderId(order.getId()));
+    }
+
     private void saveItems(Order order, List<OrderItemDTO> products) {
         if (products == null || products.isEmpty()) {
             return;
@@ -180,7 +198,8 @@ public class OrderService {
                 item.name(),
                 item.quantity(),
                 normalizeUnit(item.unit()),
-                item.unitPrice()
+                item.unitPrice(),
+                item.notes()
             );
             orderItemRepository.save(orderItem);
         });
@@ -267,7 +286,7 @@ public class OrderService {
 
     private void validateDelivery(String type, String deliveryAddress) {
         if ("DELIVERY".equals(type) && (deliveryAddress == null || deliveryAddress.isBlank())) {
-            throw new RuntimeException("Delivery address is required");
+            throw new RuntimeException("Endereço de entrega é obrigatório");
         }
     }
 
@@ -282,7 +301,7 @@ public class OrderService {
         if (normalized.equals("ENTREGA")) {
             return "DELIVERY";
         }
-        if (normalized.equals("PICKUP") || normalized.equals("DELIVERY")) {
+        if (normalized.equals("PICKUP") || normalized.equals("DELIVERY") || normalized.equals("ONLINE")) {
             return normalized;
         }
         throw new RuntimeException("Invalid order type");
@@ -312,10 +331,14 @@ public class OrderService {
         String attendantUserId = order.getAttendant() != null
             ? order.getAttendant().getUser().getId()
             : order.getAttendantUserId();
+        String paymentMethodId = order.getPaymentMethod() != null ? order.getPaymentMethod().getId() : null;
+        String paymentMethodName = order.getPaymentMethod() != null ? order.getPaymentMethod().getName() : null;
+        String customerId = order.getCustomer() != null ? order.getCustomer().getId() : null;
+        String customerName = order.getCustomer() != null ? order.getCustomer().getName() : order.getCustomerName();
         return new OrderResponseDTO(
             order.getId(),
-            order.getCustomer().getId(),
-            order.getCustomer().getName(),
+            customerId,
+            customerName,
             attendantUserId,
             order.getType(),
             order.getScheduledAt(),
@@ -324,7 +347,10 @@ public class OrderService {
             order.getStatus(),
             order.getCreatedAt(),
             order.getUpdatedAt(),
-            items.stream().map(this::toItemResponse).toList()
+            items.stream().map(this::toItemResponse).toList(),
+            paymentMethodId,
+            paymentMethodName,
+            order.getPaidAt()
         );
     }
 
@@ -334,7 +360,8 @@ public class OrderService {
             item.getName(),
             item.getQuantity(),
             item.getUnit(),
-            item.getUnitPrice()
+            item.getUnitPrice(),
+            item.getNotes()
         );
     }
 

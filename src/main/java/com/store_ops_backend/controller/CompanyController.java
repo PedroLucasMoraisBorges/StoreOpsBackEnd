@@ -17,17 +17,25 @@ import org.springframework.http.ResponseEntity;
 
 import com.store_ops_backend.models.dtos.CompanyResponseDTO;
 import com.store_ops_backend.models.dtos.CreateCompanyDTO;
+import com.store_ops_backend.models.entities.Company;
 import com.store_ops_backend.models.entities.User;
+import com.store_ops_backend.repositories.CompanyRepository;
 import com.store_ops_backend.services.CompanyService;
+
+import jakarta.persistence.EntityNotFoundException;
 
 import jakarta.validation.Valid;
 
 
 @RestController
 @RequestMapping("companies")
-public class CompanyController {   
+public class CompanyController {
+
     @Autowired
     private CompanyService service;
+
+    @Autowired
+    private CompanyRepository companyRepository;
     
     @PostMapping("/create")
     public CompanyResponseDTO createCompany(@RequestBody @Valid CreateCompanyDTO data, @AuthenticationPrincipal User user) {
@@ -47,6 +55,24 @@ public class CompanyController {
     @GetMapping("/getUserCompanies")
     public List<CompanyResponseDTO> getCompanies(@RequestParam(value = "filter", defaultValue = "nenhum") String filter, @AuthenticationPrincipal User user) {
         return service.getAllUserCompanies(user.getId(), filter);
+    }
+
+    @PutMapping("/slug/{id}")
+    public CompanyResponseDTO updateSlug(
+        @PathVariable("id") String id,
+        @RequestParam("slug") String slug
+    ) {
+        Company company = companyRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Empresa não encontrada"));
+
+        String normalized = slug.toLowerCase().replaceAll("[^a-z0-9-]", "-").replaceAll("-+", "-").replaceAll("^-|-$", "");
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("Slug inválido");
+        }
+
+        company.updateSlug(normalized);
+        companyRepository.save(company);
+        return service.getCompanyById(id);
     }
 
     @DeleteMapping("/delete/{id}")

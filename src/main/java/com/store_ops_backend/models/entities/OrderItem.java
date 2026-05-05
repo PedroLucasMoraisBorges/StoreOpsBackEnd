@@ -34,6 +34,8 @@ public class OrderItem {
     @Column(name = "unit_price")
     private BigDecimal unitPrice;
 
+    private String notes;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
@@ -44,5 +46,10 @@ public class OrderItem {
         this.quantity = quantity;
         this.unit = unit;
         this.unitPrice = unitPrice;
+    }
+
+    public OrderItem(Order order, String name, BigDecimal quantity, String unit, BigDecimal unitPrice, String notes) {
+        this(order, name, quantity, unit, unitPrice);
+        this.notes = notes;
     }
 }

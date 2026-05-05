@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.store_ops_backend.models.dtos.CompanyTransactionResponseDTO;
 import com.store_ops_backend.models.dtos.CreateTransactionDTO;
 import com.store_ops_backend.models.dtos.TransactionResponseDTO;
 import com.store_ops_backend.models.entities.Account;
@@ -72,6 +73,14 @@ public class AccountTransactionService {
         return toResponse(transaction);
     }
 
+    public List<CompanyTransactionResponseDTO> listByCompany(String companyId) {
+        return transactionsRepository
+            .findByCompanyId(companyId)
+            .stream()
+            .map(this::toCompanyResponse)
+            .toList();
+    }
+
     private TransactionResponseDTO toResponse(AccountTransactions transaction) {
         return new TransactionResponseDTO(
             transaction.getId(),
@@ -80,6 +89,19 @@ public class AccountTransactionService {
             transaction.getDescription(),
             transaction.getCreated_at(),
             transaction.getUser().getId()
+        );
+    }
+
+    private CompanyTransactionResponseDTO toCompanyResponse(AccountTransactions transaction) {
+        return new CompanyTransactionResponseDTO(
+            transaction.getId(),
+            transaction.getOrigin(),
+            transaction.getAmount(),
+            transaction.getDescription(),
+            transaction.getCreated_at(),
+            transaction.getUser().getId(),
+            transaction.getAccount().getPeople().getId(),
+            transaction.getAccount().getPeople().getName()
         );
     }
 }

@@ -10,10 +10,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.store_ops_backend.models.dtos.AddOrderItemsDTO;
 import com.store_ops_backend.models.dtos.CreateOrderDTO;
+import jakarta.validation.Valid;
 import com.store_ops_backend.models.dtos.OrderResponseDTO;
 import com.store_ops_backend.models.dtos.UpdateOrderDTO;
 import com.store_ops_backend.models.dtos.UpdateOrderStatusDTO;
@@ -28,7 +30,7 @@ public class OrderController {
 
     @PostMapping("/create/{companyId}")
     public OrderResponseDTO createOrder(
-        @RequestBody CreateOrderDTO data,
+        @RequestBody @Valid CreateOrderDTO data,
         @PathVariable("companyId") String companyId,
         @AuthenticationPrincipal User user
     ) {
@@ -90,5 +92,14 @@ public class OrderController {
         @PathVariable("itemId") String itemId
     ) {
         return orderService.removeItem(companyId, orderId, itemId);
+    }
+
+    @PutMapping("/payment/{companyId}/{orderId}")
+    public OrderResponseDTO recordPayment(
+        @PathVariable("companyId") String companyId,
+        @PathVariable("orderId") String orderId,
+        @RequestParam("paymentMethodId") String paymentMethodId
+    ) {
+        return orderService.recordPayment(companyId, orderId, paymentMethodId);
     }
 }

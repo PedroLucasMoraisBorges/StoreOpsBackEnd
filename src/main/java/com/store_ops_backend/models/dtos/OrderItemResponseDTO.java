@@ -7,5 +7,6 @@ public record OrderItemResponseDTO(
     String name,
     BigDecimal quantity,
     String unit,
-    BigDecimal unitPrice
+    BigDecimal unitPrice,
+    String notes
 ) {}

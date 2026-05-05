@@ -15,5 +15,8 @@ public record OrderResponseDTO(
     String status,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt,
-    List<OrderItemResponseDTO> products
+    List<OrderItemResponseDTO> products,
+    String paymentMethodId,
+    String paymentMethodName,
+    OffsetDateTime paidAt
 ) {}

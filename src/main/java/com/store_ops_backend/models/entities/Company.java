@@ -33,6 +33,8 @@ public class Company {
     private Boolean notification_in_email;
     private Boolean notification_for_accounts;
 
+    private String slug;
+
     public Company(String name, String type, String address, String phone, String team_size, String form_of_service,Boolean notification_new_order, Boolean weekly_reports, Boolean notification_in_email,Boolean notification_for_accounts) {
         this.name = name;
         this.type = type;
@@ -44,6 +46,10 @@ public class Company {
         this.weekly_reports = weekly_reports;
         this.notification_in_email = notification_in_email;
         this.notification_for_accounts = notification_for_accounts;
+    }
+
+    public void updateSlug(String slug) {
+        this.slug = slug;
     }
 
     public void update(

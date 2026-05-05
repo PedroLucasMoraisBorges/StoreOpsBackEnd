@@ -34,6 +34,29 @@ public class ReportController {
         return buildPdfResponse(pdf, "relatorio-encomendas", dateFrom, dateTo);
     }
 
+    @GetMapping("/online-orders")
+    public ResponseEntity<byte[]> onlineOrdersReport(
+        @RequestParam("companyId") String companyId,
+        @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+    ) {
+        validatePeriod(dateFrom, dateTo);
+        byte[] pdf = reportService.buildOnlineOrdersReport(companyId, dateFrom, dateTo);
+        return buildPdfResponse(pdf, "relatorio-pedidos-online", dateFrom, dateTo);
+    }
+
+    @GetMapping("/cash-flow")
+    public ResponseEntity<byte[]> cashFlowReport(
+        @RequestParam("companyId") String companyId,
+        @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        if (date == null) {
+            date = LocalDate.now();
+        }
+        byte[] pdf = reportService.buildCashFlowReport(companyId, date);
+        return buildPdfResponse(pdf, "relatorio-fluxo-caixa", date, date);
+    }
+
     @GetMapping("/fiado")
     public ResponseEntity<byte[]> fiadoReport(
         @RequestParam("companyId") String companyId,

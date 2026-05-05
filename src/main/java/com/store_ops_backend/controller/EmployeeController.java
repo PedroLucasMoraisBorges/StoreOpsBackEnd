@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.store_ops_backend.models.dtos.CreateEmployeeDTO;
+import jakarta.validation.Valid;
 import com.store_ops_backend.models.dtos.EmployeeResponseDTO;
 import com.store_ops_backend.models.dtos.TransactionResponseDTO;
 import com.store_ops_backend.models.dtos.UpdateEmployeeDTO;
@@ -26,7 +27,7 @@ public class EmployeeController {
 
     @PostMapping("/create/{companyId}")
     public EmployeeResponseDTO createEmployee(
-        @RequestBody CreateEmployeeDTO data,
+        @RequestBody @Valid CreateEmployeeDTO data,
         @PathVariable("companyId") String companyId
     ) {
         return service.createEmployee(data, companyId);

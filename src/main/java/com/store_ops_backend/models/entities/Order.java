@@ -45,15 +45,25 @@ public class Order {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
+    @ManyToOne
+    @JoinColumn(name = "payment_method_id")
+    private PaymentMethods paymentMethod;
+
+    @Column(name = "paid_at")
+    private OffsetDateTime paidAt;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "customer_person_id", nullable = false)
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "customer_person_id", nullable = true)
     private People customer;
 
-    @Column(name = "attendant_user_id")
+    @Column(name = "customer_name")
+    private String customerName;
+
+    @Column(name = "attendant_user_id", nullable = true)
     private String attendantUserId;
 
     @ManyToOne
@@ -117,10 +127,29 @@ public class Order {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public Order(Company company, String customerName, String type, String status,
+                 OffsetDateTime scheduledAt, String deliveryAddress, String notes) {
+        this.company = company;
+        this.customerName = customerName;
+        this.type = type;
+        this.status = status;
+        this.scheduledAt = scheduledAt;
+        this.deliveryAddress = deliveryAddress;
+        this.notes = notes;
+        this.createdAt = OffsetDateTime.now();
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void updateStatus(String status) {
         if (status != null && !status.isBlank()) {
             this.status = status;
             this.updatedAt = OffsetDateTime.now();
         }
+    }
+
+    public void recordPayment(PaymentMethods paymentMethod) {
+        this.paymentMethod = paymentMethod;
+        this.paidAt = OffsetDateTime.now();
+        this.updatedAt = OffsetDateTime.now();
     }
 }
