@@ -208,30 +208,30 @@ public class ProductService {
             .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
     }
 
-    public ProductResponseDTO toResponse(Product p) {
-        return toResponse(p, null);
+    public ProductResponseDTO toResponse(Product product) {
+        return toResponse(product, null);
     }
 
-    public ProductResponseDTO toResponse(Product p, java.util.Map<String, java.math.BigDecimal> componentOptionStockMap) {
-        List<ProductVariantDTO> variants = variantRepository.findByProductIdAndActiveTrue(p.getId())
-            .stream().map(v -> new ProductVariantDTO(v.getId(), v.getName(), v.getPriceDelta(), v.getActive(), null)).toList();
-        List<ProductExtraDTO> extras = extraRepository.findByProductIdAndActiveTrue(p.getId())
-            .stream().map(e -> new ProductExtraDTO(e.getId(), e.getName(), e.getPrice(), e.getActive())).toList();
-        List<ProductComponentGroupDTO> groups = componentGroupRepository.findByProductIdAndActiveTrue(p.getId())
-            .stream().map(g -> {
-                List<ProductComponentOptionDTO> opts = componentOptionRepository.findByGroupId(g.getId())
+    public ProductResponseDTO toResponse(Product product, java.util.Map<String, java.math.BigDecimal> componentOptionStockMap) {
+        List<ProductVariantDTO> variants = variantRepository.findByProductIdAndActiveTrue(product.getId())
+            .stream().map(variant -> new ProductVariantDTO(variant.getId(), variant.getName(), variant.getPriceDelta(), variant.getActive(), null)).toList();
+        List<ProductExtraDTO> extras = extraRepository.findByProductIdAndActiveTrue(product.getId())
+            .stream().map(extra -> new ProductExtraDTO(extra.getId(), extra.getName(), extra.getPrice(), extra.getActive())).toList();
+        List<ProductComponentGroupDTO> groups = componentGroupRepository.findByProductIdAndActiveTrue(product.getId())
+            .stream().map(group -> {
+                List<ProductComponentOptionDTO> opts = componentOptionRepository.findByGroupId(group.getId())
                     .stream().map(o -> {
                         java.math.BigDecimal qty = componentOptionStockMap != null
                             ? componentOptionStockMap.get(o.getId()) : null;
                         return new ProductComponentOptionDTO(o.getId(), o.getName(), qty);
                     }).toList();
-                return new ProductComponentGroupDTO(g.getId(), g.getName(), g.getMaxSelections(),
-                    g.isRequired(), g.getActive(), opts);
+                return new ProductComponentGroupDTO(group.getId(), group.getName(), group.getMaxSelections(),
+                    group.isRequired(), group.getActive(), opts);
             }).toList();
 
         return new ProductResponseDTO(
-            p.getId(), p.getName(), p.getCategory(), p.getUnit(),
-            p.getCostPrice(), p.getSellPrice(), p.getActive(), p.getImageUrl(), p.getCreatedAt(),
+            product.getId(), product.getName(), product.getCategory(), product.getUnit(),
+            product.getCostPrice(), product.getSellPrice(), product.getActive(), product.getImageUrl(), product.getCreatedAt(),
             variants, extras, groups, null
         );
     }
