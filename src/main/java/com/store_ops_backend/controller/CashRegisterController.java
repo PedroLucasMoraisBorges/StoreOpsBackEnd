@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.store_ops_backend.infra.security.AuthorizationHelper;
 import com.store_ops_backend.models.dtos.CashRegisterResponseDTO;
 import com.store_ops_backend.models.dtos.OpenCashRegisterDTO;
 import com.store_ops_backend.models.entities.User;
@@ -24,20 +25,26 @@ public class CashRegisterController {
     @Autowired
     private CashRegisterService cashRegisterService;
 
+    @Autowired
+    private AuthorizationHelper authorizationHelper;
+
     @PostMapping("/open/{companyId}")
     public CashRegisterResponseDTO open(
         @PathVariable("companyId") String companyId,
         @RequestBody(required = false) OpenCashRegisterDTO data,
         @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return cashRegisterService.open(companyId, user, data != null ? data : new OpenCashRegisterDTO(null));
     }
 
     @PutMapping("/close/{companyId}/{registerId}")
     public CashRegisterResponseDTO close(
         @PathVariable("companyId") String companyId,
-        @PathVariable("registerId") String registerId
+        @PathVariable("registerId") String registerId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return cashRegisterService.close(companyId, registerId);
     }
 
@@ -47,16 +54,25 @@ public class CashRegisterController {
         @PathVariable("registerId") String registerId,
         @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return cashRegisterService.reopen(companyId, registerId, user.getId());
     }
 
     @GetMapping("/all/{companyId}")
-    public List<CashRegisterResponseDTO> getAll(@PathVariable("companyId") String companyId) {
+    public List<CashRegisterResponseDTO> getAll(
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return cashRegisterService.getAll(companyId);
     }
 
     @GetMapping("/current/{companyId}")
-    public CashRegisterResponseDTO getCurrent(@PathVariable("companyId") String companyId) {
+    public CashRegisterResponseDTO getCurrent(
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return cashRegisterService.getCurrent(companyId);
     }
 }

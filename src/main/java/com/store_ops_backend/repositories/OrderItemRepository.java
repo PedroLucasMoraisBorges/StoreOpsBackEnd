@@ -1,13 +1,16 @@
 package com.store_ops_backend.repositories;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.store_ops_backend.models.dtos.DashboardTopProductDTO;
 import com.store_ops_backend.models.entities.OrderItem;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
@@ -37,5 +40,25 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
     void deleteByIdAndOrderId(
         @Param("itemId") String itemId,
         @Param("orderId") String orderId
+    );
+
+    @Query("""
+        select new com.store_ops_backend.models.dtos.DashboardTopProductDTO(
+            i.name,
+            sum(i.quantity),
+            sum(i.quantity * i.unitPrice)
+        )
+        from order_items i
+        where i.order.company.id = :companyId
+        and i.order.scheduledAt between :from and :to
+        and i.order.status = 'COMPLETED'
+        group by i.name
+        order by sum(i.quantity) desc
+    """)
+    List<DashboardTopProductDTO> findTopProductsByCompanyId(
+        @Param("companyId") String companyId,
+        @Param("from") OffsetDateTime from,
+        @Param("to") OffsetDateTime to,
+        Pageable pageable
     );
 }

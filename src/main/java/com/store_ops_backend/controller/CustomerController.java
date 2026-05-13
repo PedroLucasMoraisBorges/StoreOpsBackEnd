@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.store_ops_backend.infra.security.AuthorizationHelper;
 import com.store_ops_backend.models.dtos.CreateCustomerDTO;
 import com.store_ops_backend.models.dtos.CreateTransactionDTO;
 import com.store_ops_backend.models.dtos.CustomerResponseDTO;
@@ -25,30 +26,42 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("customers")
 public class CustomerController {
+
     @Autowired
     private CustomerService customerService;
 
     @Autowired
     private AccountTransactionService accountTransactionService;
 
+    @Autowired
+    private AuthorizationHelper authorizationHelper;
+
     @PostMapping("/create/{companyId}")
     public CustomerResponseDTO createCustomer(
         @RequestBody @Valid CreateCustomerDTO data,
-        @PathVariable("companyId") String companyId
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return customerService.createCustomer(data, companyId);
     }
 
     @GetMapping("/getAll/{companyId}")
-    public List<CustomerResponseDTO> getAllCustomers(@PathVariable("companyId") String companyId) {
+    public List<CustomerResponseDTO> getAllCustomers(
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return customerService.getAllCustomers(companyId);
     }
 
     @GetMapping("/get/{companyId}/{customerId}")
     public CustomerResponseDTO getCustomerById(
         @PathVariable("companyId") String companyId,
-        @PathVariable("customerId") String customerId
+        @PathVariable("customerId") String customerId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return customerService.getCustomerById(companyId, customerId);
     }
 
@@ -56,8 +69,10 @@ public class CustomerController {
     public CustomerResponseDTO updateCustomer(
         @RequestBody UpdateCustomerDTO data,
         @PathVariable("companyId") String companyId,
-        @PathVariable("customerId") String customerId
+        @PathVariable("customerId") String customerId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return customerService.updateCustomer(companyId, customerId, data);
     }
 
@@ -68,6 +83,7 @@ public class CustomerController {
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return accountTransactionService.createDebit(companyId, customerId, data, user);
     }
 
@@ -78,15 +94,17 @@ public class CustomerController {
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
     ) {
-        
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return accountTransactionService.createPayment(companyId, customerId, data, user);
     }
 
     @GetMapping("/transactions/{companyId}/{customerId}")
     public List<TransactionResponseDTO> getTransactions(
         @PathVariable("companyId") String companyId,
-        @PathVariable("customerId") String customerId
+        @PathVariable("customerId") String customerId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return accountTransactionService.listTransactions(companyId, customerId);
     }
 }

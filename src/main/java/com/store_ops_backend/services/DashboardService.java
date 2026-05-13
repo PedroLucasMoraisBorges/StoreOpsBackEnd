@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,7 @@ import com.store_ops_backend.models.dtos.DashboardRecentOrderDTO;
 import com.store_ops_backend.models.dtos.DashboardResponseDTO;
 import com.store_ops_backend.models.dtos.DashboardStockAlertDTO;
 import com.store_ops_backend.models.dtos.DashboardTopCustomerDTO;
+import com.store_ops_backend.models.dtos.DashboardTopProductDTO;
 import com.store_ops_backend.models.dtos.DashboardWeeklyRevenueDTO;
 import com.store_ops_backend.models.entities.AccountTransactions;
 import com.store_ops_backend.models.entities.Company;
@@ -110,6 +113,10 @@ public class DashboardService {
             ))
             .toList();
 
+        List<DashboardTopProductDTO> topProducts = orderItemRepository.findTopProductsByCompanyId(
+            companyId, monthStart, monthEnd, PageRequest.of(0, 10)
+        );
+
         return new DashboardResponseDTO(
             totalCustomers,
             monthOrdersCount,
@@ -120,7 +127,8 @@ public class DashboardService {
             recentOrders,
             topCustomers,
             stockAlertsCount,
-            stockAlerts
+            stockAlerts,
+            topProducts
         );
     }
 

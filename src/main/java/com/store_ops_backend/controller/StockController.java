@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.store_ops_backend.infra.security.AuthorizationHelper;
 import com.store_ops_backend.models.dtos.CreateStockMovementDTO;
 import com.store_ops_backend.models.dtos.StockItemResponseDTO;
 import com.store_ops_backend.models.dtos.StockMovementResponseDTO;
@@ -31,21 +32,34 @@ public class StockController {
     @Autowired
     private StockService stockService;
 
+    @Autowired
+    private AuthorizationHelper authorizationHelper;
+
     @GetMapping("/getAll/{companyId}")
-    public List<StockItemResponseDTO> getAll(@PathVariable("companyId") String companyId) {
+    public List<StockItemResponseDTO> getAll(
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return stockService.listStock(companyId);
     }
 
     @GetMapping("/alerts/{companyId}")
-    public List<StockItemResponseDTO> getAlerts(@PathVariable("companyId") String companyId) {
+    public List<StockItemResponseDTO> getAlerts(
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return stockService.listBelowMinimum(companyId);
     }
 
     @GetMapping("/movements/{companyId}")
     public List<StockMovementResponseDTO> getMovements(
         @PathVariable("companyId") String companyId,
-        @RequestParam(value = "productId", required = false) String productId
+        @RequestParam(value = "productId", required = false) String productId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return productId != null
             ? stockService.listMovementsByProduct(companyId, productId)
             : stockService.listMovements(companyId);
@@ -58,6 +72,7 @@ public class StockController {
         @RequestBody @Valid CreateStockMovementDTO data,
         @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return stockService.registerMovement(companyId, data, user);
     }
 
@@ -67,8 +82,10 @@ public class StockController {
         @PathVariable("productId") String productId,
         @RequestParam("value") BigDecimal value,
         @RequestParam(value = "variantId", required = false) String variantId,
-        @RequestParam(value = "componentOptionId", required = false) String componentOptionId
+        @RequestParam(value = "componentOptionId", required = false) String componentOptionId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return stockService.setMinQuantity(companyId, productId, value, variantId, componentOptionId);
     }
 }

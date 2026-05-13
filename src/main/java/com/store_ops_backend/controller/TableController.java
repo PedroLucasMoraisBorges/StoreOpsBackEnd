@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,10 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.store_ops_backend.infra.security.AuthorizationHelper;
 import com.store_ops_backend.models.dtos.AddSessionItemDTO;
 import com.store_ops_backend.models.dtos.CreateTableDTO;
 import com.store_ops_backend.models.dtos.TableResponseDTO;
 import com.store_ops_backend.models.dtos.TableSessionResponseDTO;
+import com.store_ops_backend.models.entities.User;
 import com.store_ops_backend.services.TableService;
 
 import jakarta.validation.Valid;
@@ -29,8 +32,15 @@ public class TableController {
     @Autowired
     private TableService tableService;
 
+    @Autowired
+    private AuthorizationHelper authorizationHelper;
+
     @GetMapping("/getAll/{companyId}")
-    public List<TableResponseDTO> getAll(@PathVariable("companyId") String companyId) {
+    public List<TableResponseDTO> getAll(
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return tableService.listTables(companyId);
     }
 
@@ -38,8 +48,10 @@ public class TableController {
     @ResponseStatus(HttpStatus.CREATED)
     public TableResponseDTO create(
         @PathVariable("companyId") String companyId,
-        @RequestBody @Valid CreateTableDTO data
+        @RequestBody @Valid CreateTableDTO data,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return tableService.createTable(companyId, data);
     }
 
@@ -47,8 +59,10 @@ public class TableController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
         @PathVariable("companyId") String companyId,
-        @PathVariable("tableId") String tableId
+        @PathVariable("tableId") String tableId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         tableService.deleteTable(companyId, tableId);
     }
 
@@ -57,8 +71,10 @@ public class TableController {
     public TableSessionResponseDTO openSession(
         @PathVariable("companyId") String companyId,
         @PathVariable("tableId") String tableId,
-        @RequestBody(required = false) Map<String, String> body
+        @RequestBody(required = false) Map<String, String> body,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         String notes = body != null ? body.get("notes") : null;
         return tableService.openSession(companyId, tableId, notes);
     }
@@ -66,16 +82,20 @@ public class TableController {
     @GetMapping("/sessions/open/{companyId}/{tableId}")
     public TableSessionResponseDTO getOpenSession(
         @PathVariable("companyId") String companyId,
-        @PathVariable("tableId") String tableId
+        @PathVariable("tableId") String tableId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return tableService.getOpenSession(companyId, tableId);
     }
 
     @GetMapping("/sessions/get/{companyId}/{sessionId}")
     public TableSessionResponseDTO getSession(
         @PathVariable("companyId") String companyId,
-        @PathVariable("sessionId") String sessionId
+        @PathVariable("sessionId") String sessionId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return tableService.getSession(companyId, sessionId);
     }
 
@@ -83,8 +103,10 @@ public class TableController {
     public TableSessionResponseDTO addItem(
         @PathVariable("companyId") String companyId,
         @PathVariable("sessionId") String sessionId,
-        @RequestBody @Valid AddSessionItemDTO data
+        @RequestBody @Valid AddSessionItemDTO data,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return tableService.addItem(companyId, sessionId, data);
     }
 
@@ -92,8 +114,10 @@ public class TableController {
     public TableSessionResponseDTO removeItem(
         @PathVariable("companyId") String companyId,
         @PathVariable("sessionId") String sessionId,
-        @PathVariable("itemId") String itemId
+        @PathVariable("itemId") String itemId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return tableService.removeItem(companyId, sessionId, itemId);
     }
 
@@ -101,16 +125,20 @@ public class TableController {
     public TableSessionResponseDTO closeSession(
         @PathVariable("companyId") String companyId,
         @PathVariable("sessionId") String sessionId,
-        @RequestBody(required = false) Map<String, String> body
+        @RequestBody(required = false) Map<String, String> body,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         String paymentMethodId = body != null ? body.get("paymentMethodId") : null;
         return tableService.closeSession(companyId, sessionId, paymentMethodId);
     }
 
     @GetMapping("/sessions/payments/{companyId}")
     public List<TableSessionResponseDTO> getClosedSessionsWithPayment(
-        @PathVariable("companyId") String companyId
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return tableService.listClosedSessionsWithPayment(companyId);
     }
 }

@@ -13,5 +13,6 @@ public record DashboardResponseDTO(
     List<DashboardRecentOrderDTO> recentOrders,
     List<DashboardTopCustomerDTO> topCustomers,
     int stockAlertsCount,
-    List<DashboardStockAlertDTO> stockAlerts
+    List<DashboardStockAlertDTO> stockAlerts,
+    List<DashboardTopProductDTO> topProducts
 ) {}

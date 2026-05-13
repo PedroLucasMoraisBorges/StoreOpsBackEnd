@@ -9,26 +9,35 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.store_ops_backend.infra.security.AuthorizationHelper;
+import com.store_ops_backend.models.entities.User;
 import com.store_ops_backend.services.reports.ReportService;
 
 @RestController
 @RequestMapping("reports")
 public class ReportController {
+
     @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private AuthorizationHelper authorizationHelper;
 
     @GetMapping("/orders")
     public ResponseEntity<byte[]> ordersReport(
         @RequestParam("companyId") String companyId,
         @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildOrdersReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-encomendas", dateFrom, dateTo);
@@ -38,8 +47,10 @@ public class ReportController {
     public ResponseEntity<byte[]> onlineOrdersReport(
         @RequestParam("companyId") String companyId,
         @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildOnlineOrdersReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-pedidos-online", dateFrom, dateTo);
@@ -48,8 +59,10 @@ public class ReportController {
     @GetMapping("/cash-flow")
     public ResponseEntity<byte[]> cashFlowReport(
         @RequestParam("companyId") String companyId,
-        @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+        @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         if (date == null) {
             date = LocalDate.now();
         }
@@ -61,8 +74,10 @@ public class ReportController {
     public ResponseEntity<byte[]> fiadoReport(
         @RequestParam("companyId") String companyId,
         @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildFiadoReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-fiado", dateFrom, dateTo);
@@ -70,8 +85,10 @@ public class ReportController {
 
     @GetMapping("/customers")
     public ResponseEntity<byte[]> customersReport(
-        @RequestParam("companyId") String companyId
+        @RequestParam("companyId") String companyId,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         byte[] pdf = reportService.buildCustomersReport(companyId);
         return buildPdfResponse(pdf, "relatorio-clientes", null, null);
     }
@@ -80,8 +97,10 @@ public class ReportController {
     public ResponseEntity<byte[]> employeesReport(
         @RequestParam("companyId") String companyId,
         @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
     ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildEmployeesReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-funcionarios", dateFrom, dateTo);
