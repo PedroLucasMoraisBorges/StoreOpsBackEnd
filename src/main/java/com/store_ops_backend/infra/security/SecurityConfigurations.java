@@ -1,8 +1,10 @@
 package com.store_ops_backend.infra.security;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +27,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfigurations {
     @Autowired
     SecurityFilter securityFilter;
+
+    @Value("${cors.allowed-origins:}")
+    private String extraAllowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
@@ -61,13 +66,18 @@ public class SecurityConfigurations {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of(
+        List<String> origins = new ArrayList<>(List.of(
             "http://localhost:*",
             "http://127.0.0.1:*",
             "http://192.168.*:*",
-            "http://10.*.*.*:*",
-            "https://id-preview--6c0bf2c0-e580-41cf-96cf-e709320deb94.lovable.app"
+            "http://10.*.*.*:*"
         ));
+        if (!extraAllowedOrigins.isBlank()) {
+            for (String origin : extraAllowedOrigins.split(",")) {
+                origins.add(origin.strip());
+            }
+        }
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of(
             "GET", "POST", "PUT", "DELETE", "OPTIONS"
         ));
