@@ -1,6 +1,7 @@
 package com.store_ops_backend.controller;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +13,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.store_ops_backend.infra.security.AuthorizationHelper;
+import com.store_ops_backend.models.dtos.ProductProfitabilityDTO;
 import com.store_ops_backend.models.entities.User;
+import com.store_ops_backend.services.ProfitabilityService;
+import com.store_ops_backend.services.reports.CsvReportService;
 import com.store_ops_backend.services.reports.ReportService;
 
 @RestController
@@ -28,7 +33,13 @@ public class ReportController {
     private ReportService reportService;
 
     @Autowired
+    private CsvReportService csvReportService;
+
+    @Autowired
     private AuthorizationHelper authorizationHelper;
+
+    @Autowired
+    private ProfitabilityService profitabilityService;
 
     @GetMapping("/orders")
     public ResponseEntity<byte[]> ordersReport(
@@ -37,7 +48,7 @@ public class ReportController {
         @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildOrdersReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-encomendas", dateFrom, dateTo);
@@ -50,7 +61,7 @@ public class ReportController {
         @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildOnlineOrdersReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-pedidos-online", dateFrom, dateTo);
@@ -62,7 +73,7 @@ public class ReportController {
         @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         if (date == null) {
             date = LocalDate.now();
         }
@@ -77,7 +88,7 @@ public class ReportController {
         @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildFiadoReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-fiado", dateFrom, dateTo);
@@ -88,7 +99,7 @@ public class ReportController {
         @RequestParam("companyId") String companyId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         byte[] pdf = reportService.buildCustomersReport(companyId);
         return buildPdfResponse(pdf, "relatorio-clientes", null, null);
     }
@@ -100,10 +111,87 @@ public class ReportController {
         @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         validatePeriod(dateFrom, dateTo);
         byte[] pdf = reportService.buildEmployeesReport(companyId, dateFrom, dateTo);
         return buildPdfResponse(pdf, "relatorio-funcionarios", dateFrom, dateTo);
+    }
+
+    @GetMapping("/profitability")
+    public ResponseEntity<List<ProductProfitabilityDTO>> profitabilityData(
+        @RequestParam("companyId") String companyId,
+        @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        validatePeriod(dateFrom, dateTo);
+        return ResponseEntity.ok(profitabilityService.getProductProfitability(companyId, dateFrom, dateTo));
+    }
+
+    @GetMapping("/profitability/pdf")
+    public ResponseEntity<byte[]> profitabilityPdf(
+        @RequestParam("companyId") String companyId,
+        @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+        @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        validatePeriod(dateFrom, dateTo);
+        byte[] pdf = reportService.buildProfitabilityReport(companyId, dateFrom, dateTo);
+        return buildPdfResponse(pdf, "relatorio-rentabilidade", dateFrom, dateTo);
+    }
+
+    // ── CSV Exports ───────────────────────────────────────────────────────────
+
+    @GetMapping("/{companyId}/orders/csv")
+    public ResponseEntity<byte[]> ordersCsv(
+        @PathVariable("companyId") String companyId,
+        @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+        @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        if (dateFrom == null) dateFrom = LocalDate.now().minusMonths(1);
+        if (dateTo == null) dateTo = LocalDate.now();
+        byte[] csv = csvReportService.buildOrdersCsv(companyId, dateFrom, dateTo);
+        return buildCsvResponse(csv, "encomendas_" + dateFrom + "_" + dateTo + ".csv");
+    }
+
+    @GetMapping("/{companyId}/cashflow/csv")
+    public ResponseEntity<byte[]> cashFlowCsv(
+        @PathVariable("companyId") String companyId,
+        @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        if (date == null) date = LocalDate.now();
+        byte[] csv = csvReportService.buildCashFlowCsv(companyId, date);
+        return buildCsvResponse(csv, "fluxo_caixa_" + date + ".csv");
+    }
+
+    @GetMapping("/{companyId}/profitability/csv")
+    public ResponseEntity<byte[]> profitabilityCsv(
+        @PathVariable("companyId") String companyId,
+        @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+        @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        if (dateFrom == null) dateFrom = LocalDate.now().minusMonths(1);
+        if (dateTo == null) dateTo = LocalDate.now();
+        byte[] csv = csvReportService.buildProfitabilityCsv(companyId, dateFrom, dateTo);
+        return buildCsvResponse(csv, "rentabilidade_" + dateFrom + "_" + dateTo + ".csv");
+    }
+
+    @GetMapping("/{companyId}/stock/csv")
+    public ResponseEntity<byte[]> stockCsv(
+        @PathVariable("companyId") String companyId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        byte[] csv = csvReportService.buildStockCsv(companyId);
+        return buildCsvResponse(csv, "estoque_" + LocalDate.now() + ".csv");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -136,5 +224,12 @@ public class ReportController {
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentDisposition(ContentDisposition.inline().filename(filename).build());
         return ResponseEntity.ok().headers(headers).body(pdf);
+    }
+
+    private ResponseEntity<byte[]> buildCsvResponse(byte[] csv, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
+        return ResponseEntity.ok().headers(headers).body(csv);
     }
 }

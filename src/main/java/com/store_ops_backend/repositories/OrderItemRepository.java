@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.store_ops_backend.models.dtos.DashboardTopProductDTO;
+import com.store_ops_backend.models.dtos.TopProductRawDTO;
 import com.store_ops_backend.models.entities.OrderItem;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
@@ -21,6 +21,13 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
         order by i.id asc
     """)
     List<OrderItem> findByOrderId(@Param("orderId") String orderId);
+
+    @Query("""
+        select i
+        from order_items i
+        where i.order.id in :orderIds
+    """)
+    List<OrderItem> findByOrderIdIn(@Param("orderIds") List<String> orderIds);
 
     @Modifying
     @Transactional
@@ -43,7 +50,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
     );
 
     @Query("""
-        select new com.store_ops_backend.models.dtos.DashboardTopProductDTO(
+        select new com.store_ops_backend.models.dtos.TopProductRawDTO(
             i.name,
             sum(i.quantity),
             sum(i.quantity * i.unitPrice)
@@ -55,7 +62,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
         group by i.name
         order by sum(i.quantity) desc
     """)
-    List<DashboardTopProductDTO> findTopProductsByCompanyId(
+    List<TopProductRawDTO> findTopProductsByCompanyId(
         @Param("companyId") String companyId,
         @Param("from") OffsetDateTime from,
         @Param("to") OffsetDateTime to,

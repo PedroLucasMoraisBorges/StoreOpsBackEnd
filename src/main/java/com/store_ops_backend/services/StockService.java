@@ -91,7 +91,7 @@ public class StockService {
                 .orElseThrow(() -> new EntityNotFoundException("Opção de componente não encontrada"));
             Product product = option.getGroup().getProduct();
             return stockItemRepository
-                .findComponentLevelStock(option.getId(), company.getId())
+                .findComponentLevelStockForUpdate(option.getId(), company.getId())
                 .orElseGet(() -> stockItemRepository.save(new StockItem(product, option, company, BigDecimal.ZERO)));
         }
 
@@ -107,13 +107,13 @@ public class StockService {
             ProductVariant variant = variantRepository.findById(data.variantId())
                 .orElseThrow(() -> new EntityNotFoundException("Variante não encontrada"));
             return stockItemRepository
-                .findVariantLevelStock(data.productId(), variant.getId(), company.getId())
+                .findVariantLevelStockForUpdate(data.productId(), variant.getId(), company.getId())
                 .orElseGet(() -> stockItemRepository.save(new StockItem(product, variant, company, BigDecimal.ZERO)));
         }
 
         // Product level (no variant, no component)
         return stockItemRepository
-            .findProductLevelStock(data.productId(), company.getId())
+            .findProductLevelStockForUpdate(data.productId(), company.getId())
             .orElseGet(() -> stockItemRepository.save(new StockItem(product, (ProductVariant) null, company, BigDecimal.ZERO)));
     }
 

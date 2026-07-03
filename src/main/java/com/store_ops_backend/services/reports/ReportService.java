@@ -8,6 +8,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import com.store_ops_backend.models.entities.OrderItem;
 import com.store_ops_backend.models.entities.People;
 import com.store_ops_backend.models.entities.TableSession;
 import com.store_ops_backend.models.entities.UserCompany;
+import com.store_ops_backend.models.dtos.ProductProfitabilityDTO;
 import com.store_ops_backend.repositories.AccountTransactionsRepository;
 import com.store_ops_backend.repositories.CashRegisterRepository;
 import com.store_ops_backend.repositories.CompanyExpenseRepository;
@@ -30,6 +33,7 @@ import com.store_ops_backend.repositories.OrderRepository;
 import com.store_ops_backend.repositories.PeopleRepository;
 import com.store_ops_backend.repositories.TableSessionRepository;
 import com.store_ops_backend.repositories.UserCompanyRepository;
+import com.store_ops_backend.services.ProfitabilityService;
 
 @Service
 public class ReportService {
@@ -64,6 +68,9 @@ public class ReportService {
     @Autowired
     private TableSessionRepository tableSessionRepository;
 
+    @Autowired
+    private ProfitabilityService profitabilityService;
+
     public byte[] buildOrdersReport(String companyId, LocalDate dateFrom, LocalDate dateTo) {
         Company company = loadCompany(companyId);
         PeriodRange period = PeriodRange.of(dateFrom, dateTo);
@@ -81,9 +88,10 @@ public class ReportService {
 
         int totalOrders = orders.size();
         BigDecimal totalValue = BigDecimal.ZERO;
+        Map<String, List<OrderItem>> itemsByOrder = batchItems(orders);
 
         for (Order order : orders) {
-            List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+            List<OrderItem> items = itemsByOrder.getOrDefault(order.getId(), List.of());
             BigDecimal orderTotal = items.stream()
                 .map(item -> item.getUnitPrice().multiply(item.getQuantity()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -146,9 +154,10 @@ public class ReportService {
 
         int totalOrders = orders.size();
         BigDecimal totalValue = BigDecimal.ZERO;
+        Map<String, List<OrderItem>> itemsByOrder = batchItems(orders);
 
         for (Order order : orders) {
-            List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+            List<OrderItem> items = itemsByOrder.getOrDefault(order.getId(), List.of());
             BigDecimal orderTotal = items.stream()
                 .map(item -> item.getUnitPrice().multiply(item.getQuantity()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -231,8 +240,9 @@ public class ReportService {
         List<Order> encomendas = orderRepository.findEncomendasByCompanyIdAndScheduledAtBetween(
             companyId, period.start(), period.end()
         ).stream().filter(o -> "COMPLETED".equals(o.getStatus())).toList();
+        Map<String, List<OrderItem>> encomendasItems = batchItems(encomendas);
         BigDecimal encomendasTotal = encomendas.stream()
-            .map(o -> orderItemRepository.findByOrderId(o.getId()).stream()
+            .map(o -> encomendasItems.getOrDefault(o.getId(), List.of()).stream()
                 .map(i -> i.getUnitPrice().multiply(i.getQuantity()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -241,8 +251,9 @@ public class ReportService {
         List<Order> onlineOrders = orderRepository.findOnlineOrdersByCompanyIdAndCreatedAtBetween(
             companyId, period.start(), period.end()
         ).stream().filter(o -> "COMPLETED".equals(o.getStatus())).toList();
+        Map<String, List<OrderItem>> onlineItems = batchItems(onlineOrders);
         BigDecimal onlineOrdersTotal = onlineOrders.stream()
-            .map(o -> orderItemRepository.findByOrderId(o.getId()).stream()
+            .map(o -> onlineItems.getOrDefault(o.getId(), List.of()).stream()
                 .map(i -> i.getUnitPrice().multiply(i.getQuantity()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -443,6 +454,71 @@ public class ReportService {
         pdf.addParagraph("Total de fiados vendidos: R$ " + formatMoney(totalFiado));
 
         return pdf.build();
+    }
+
+    public byte[] buildProfitabilityReport(String companyId, LocalDate dateFrom, LocalDate dateTo) {
+        Company company = loadCompany(companyId);
+        PeriodRange period = PeriodRange.of(dateFrom, dateTo);
+        List<ProductProfitabilityDTO> products = profitabilityService.getProductProfitability(companyId, dateFrom, dateTo);
+
+        PdfReportBuilder pdf = new PdfReportBuilder(
+            "Relatório de CMV e Rentabilidade",
+            company.getName(),
+            period.label()
+        );
+
+        List<String> headers = List.of("Produto", "Categoria", "Qtd", "Receita", "Custo", "Margem", "Margem %");
+        List<Float> widths = List.of(130f, 80f, 45f, 65f, 65f, 65f, 60f);
+        List<List<String>> rows = new ArrayList<>();
+
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        BigDecimal totalCost = BigDecimal.ZERO;
+        BigDecimal totalMargin = BigDecimal.ZERO;
+
+        for (ProductProfitabilityDTO p : products) {
+            rows.add(List.of(
+                p.productName(),
+                p.category() != null ? p.category() : "-",
+                p.totalQuantitySold().toPlainString(),
+                "R$ " + formatMoney(p.totalRevenue()),
+                "R$ " + formatMoney(p.totalCost()),
+                "R$ " + formatMoney(p.grossMargin()),
+                p.marginPercent().toPlainString() + "%"
+            ));
+            totalRevenue = totalRevenue.add(p.totalRevenue());
+            totalCost = totalCost.add(p.totalCost());
+            totalMargin = totalMargin.add(p.grossMargin());
+        }
+
+        pdf.addTable(headers, rows, widths);
+
+        BigDecimal avgMarginPct = BigDecimal.ZERO;
+        if (totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            avgMarginPct = totalMargin.divide(totalRevenue, 4, java.math.RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+
+        pdf.addSectionTitle("Resumo do Período");
+        pdf.addParagraph("Total de produtos analisados: " + products.size());
+        pdf.addParagraph("Receita total: R$ " + formatMoney(totalRevenue));
+        pdf.addParagraph("Custo total (CMV): R$ " + formatMoney(totalCost));
+        pdf.addParagraph("Margem bruta total: R$ " + formatMoney(totalMargin));
+        pdf.addParagraph("CMV médio do período: " + avgMarginPct.toPlainString() + "%");
+
+        if (!products.isEmpty()) {
+            pdf.addParagraph("Produto mais rentável: " + products.get(0).productName());
+            pdf.addParagraph("Produto menos rentável: " + products.get(products.size() - 1).productName());
+        }
+
+        return pdf.build();
+    }
+
+    private Map<String, List<OrderItem>> batchItems(List<Order> orders) {
+        if (orders.isEmpty()) return Map.of();
+        List<String> ids = orders.stream().map(Order::getId).toList();
+        return orderItemRepository.findByOrderIdIn(ids).stream()
+            .collect(Collectors.groupingBy(i -> i.getOrder().getId()));
     }
 
     private String resolveCustomerName(Order order) {

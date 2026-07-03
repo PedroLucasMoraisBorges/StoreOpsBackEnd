@@ -2,10 +2,8 @@ package com.store_ops_backend.models.dtos;
 
 import java.math.BigDecimal;
 
-public record DashboardTopProductDTO(
+public record TopProductRawDTO(
     String name,
     BigDecimal totalQuantity,
-    BigDecimal totalRevenue,
-    BigDecimal marginPercent,
-    String menuEngineering
+    BigDecimal totalRevenue
 ) {}

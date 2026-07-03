@@ -7,15 +7,13 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.data.domain.PageRequest;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.store_ops_backend.models.dtos.DashboardDailySummaryDTO;
@@ -25,12 +23,13 @@ import com.store_ops_backend.models.dtos.DashboardStockAlertDTO;
 import com.store_ops_backend.models.dtos.DashboardTopCustomerDTO;
 import com.store_ops_backend.models.dtos.DashboardTopProductDTO;
 import com.store_ops_backend.models.dtos.DashboardWeeklyRevenueDTO;
+import com.store_ops_backend.models.dtos.TopProductRawDTO;
 import com.store_ops_backend.models.entities.AccountTransactions;
 import com.store_ops_backend.models.entities.Company;
 import com.store_ops_backend.models.entities.CompanyExpense;
 import com.store_ops_backend.models.entities.Order;
 import com.store_ops_backend.models.entities.OrderItem;
-import com.store_ops_backend.models.entities.People;
+import com.store_ops_backend.models.entities.Product;
 import com.store_ops_backend.models.entities.StockItem;
 import com.store_ops_backend.models.entities.TableSession;
 import com.store_ops_backend.repositories.AccountTransactionsRepository;
@@ -39,12 +38,12 @@ import com.store_ops_backend.repositories.CompanyRepository;
 import com.store_ops_backend.repositories.OrderItemRepository;
 import com.store_ops_backend.repositories.OrderRepository;
 import com.store_ops_backend.repositories.PeopleRepository;
+import com.store_ops_backend.repositories.ProductRepository;
 import com.store_ops_backend.repositories.StockItemRepository;
 import com.store_ops_backend.repositories.TableSessionRepository;
 
 @Service
 public class DashboardService {
-    private static final String CUSTOMER_TYPE = "CLIENT";
 
     @Autowired
     private CompanyRepository companyRepository;
@@ -70,6 +69,9 @@ public class DashboardService {
     @Autowired
     private TableSessionRepository tableSessionRepository;
 
+    @Autowired
+    private ProductRepository productRepository;
+
     public DashboardResponseDTO getDashboard(String companyId) {
         Company company = companyRepository.findById(companyId)
             .orElseThrow(() -> new RuntimeException("Company not found"));
@@ -88,8 +90,9 @@ public class DashboardService {
         int totalCustomers = peopleRepository.findByCompanyIdAndType(companyId).size();
 
         List<Order> ordersThisMonth = orderRepository.findByCompanyIdAndScheduledAtBetween(companyId, monthStart, monthEnd);
+        Map<String, BigDecimal> monthTotals = batchOrderTotals(ordersThisMonth);
         int monthOrdersCount = ordersThisMonth.size();
-        BigDecimal monthRevenue = sumCompletedOrders(ordersThisMonth);
+        BigDecimal monthRevenue = sumCompletedOrders(ordersThisMonth, monthTotals);
 
         double revenueChangePercent = buildRevenueChangePercent(companyId, firstDayOfMonth, monthRevenue, zone);
 
@@ -113,9 +116,10 @@ public class DashboardService {
             ))
             .toList();
 
-        List<DashboardTopProductDTO> topProducts = orderItemRepository.findTopProductsByCompanyId(
+        List<TopProductRawDTO> rawProducts = orderItemRepository.findTopProductsByCompanyId(
             companyId, monthStart, monthEnd, PageRequest.of(0, 10)
         );
+        List<DashboardTopProductDTO> topProducts = enrichWithMenuEngineering(rawProducts, companyId);
 
         return new DashboardResponseDTO(
             totalCustomers,
@@ -132,6 +136,77 @@ public class DashboardService {
         );
     }
 
+    private List<DashboardTopProductDTO> enrichWithMenuEngineering(List<TopProductRawDTO> raw, String companyId) {
+        if (raw.isEmpty()) return List.of();
+
+        // Build name → costPrice map from catalog
+        Map<String, BigDecimal> costByName = productRepository.findByCompanyIdAndActiveOrderByNameAsc(companyId, true)
+            .stream()
+            .filter(p -> p.getCostPrice() != null && p.getSellPrice() != null
+                         && p.getSellPrice().compareTo(BigDecimal.ZERO) > 0)
+            .collect(Collectors.toMap(
+                Product::getName,
+                p -> p.getCostPrice().divide(p.getSellPrice(), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)),
+                (a, b) -> a  // keep first if duplicate names
+            ));
+
+        // Compute marginPercent for each product
+        List<BigDecimal> quantities  = new ArrayList<>();
+        List<BigDecimal> margins     = new ArrayList<>();
+
+        List<BigDecimal[]> enriched = new ArrayList<>();
+        for (TopProductRawDTO r : raw) {
+            BigDecimal costPct = costByName.getOrDefault(r.name(), null);
+            BigDecimal margin  = costPct != null
+                ? BigDecimal.valueOf(100).subtract(costPct).setScale(1, RoundingMode.HALF_UP)
+                : null;
+            enriched.add(new BigDecimal[]{ r.totalQuantity(), margin });
+            quantities.add(r.totalQuantity());
+            if (margin != null) margins.add(margin);
+        }
+
+        BigDecimal medianQty    = median(quantities);
+        BigDecimal medianMargin = median(margins);
+
+        List<DashboardTopProductDTO> result = new ArrayList<>();
+        for (int i = 0; i < raw.size(); i++) {
+            TopProductRawDTO r     = raw.get(i);
+            BigDecimal qty         = enriched.get(i)[0];
+            BigDecimal margin      = enriched.get(i)[1];
+
+            String classification = null;
+            if (margin != null && medianMargin != null) {
+                boolean highQty    = qty.compareTo(medianQty)    >= 0;
+                boolean highMargin = margin.compareTo(medianMargin) >= 0;
+                classification = highQty && highMargin  ? "STAR"
+                               : highQty                ? "PLOW_HORSE"
+                               : highMargin             ? "PUZZLE"
+                               :                          "DOG";
+            }
+
+            result.add(new DashboardTopProductDTO(
+                r.name(),
+                r.totalQuantity(),
+                r.totalRevenue(),
+                margin,
+                classification
+            ));
+        }
+        return result;
+    }
+
+    private BigDecimal median(List<BigDecimal> values) {
+        if (values.isEmpty()) return null;
+        List<BigDecimal> sorted = values.stream().sorted().toList();
+        int mid = sorted.size() / 2;
+        if (sorted.size() % 2 == 0) {
+            return sorted.get(mid - 1).add(sorted.get(mid))
+                         .divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
+        }
+        return sorted.get(mid);
+    }
+
     private double buildRevenueChangePercent(String companyId, LocalDate firstDayOfMonth,
                                               BigDecimal currentRevenue, ZoneId zone) {
         LocalDate firstDayOfPrevMonth = firstDayOfMonth.minusMonths(1);
@@ -140,7 +215,8 @@ public class DashboardService {
         OffsetDateTime prevEnd = lastDayOfPrevMonth.plusDays(1).atStartOfDay(zone).toOffsetDateTime().minusNanos(1);
 
         List<Order> prevOrders = orderRepository.findByCompanyIdAndScheduledAtBetween(companyId, prevStart, prevEnd);
-        BigDecimal prevRevenue = sumCompletedOrders(prevOrders);
+        Map<String, BigDecimal> prevTotals = batchOrderTotals(prevOrders);
+        BigDecimal prevRevenue = sumCompletedOrders(prevOrders, prevTotals);
 
         if (prevRevenue.compareTo(BigDecimal.ZERO) > 0) {
             return currentRevenue.subtract(prevRevenue)
@@ -160,11 +236,12 @@ public class DashboardService {
         OffsetDateTime end = weekEnd.plusDays(1).atStartOfDay(zone).toOffsetDateTime().minusNanos(1);
 
         List<Order> completedOrders = orderRepository.findCompletedByCompanyIdAndCreatedAtBetween(companyId, start, end);
+        Map<String, BigDecimal> totals = batchOrderTotals(completedOrders);
         Map<LocalDate, BigDecimal> totalsByDay = new HashMap<>();
 
         for (Order order : completedOrders) {
             LocalDate day = order.getScheduledAt().atZoneSameInstant(zone).toLocalDate();
-            BigDecimal total = orderTotal(order);
+            BigDecimal total = totals.getOrDefault(order.getId(), BigDecimal.ZERO);
             totalsByDay.merge(day, total, BigDecimal::add);
         }
 
@@ -184,12 +261,14 @@ public class DashboardService {
         List<CompanyExpense> todayExpenses = expenseRepository.findByCompanyIdAndExpenseDateBetween(companyId, from, to);
         List<TableSession> closedSessions = tableSessionRepository.findClosedByCompanyAndClosedAtBetween(companyId, from, to);
 
+        Map<String, BigDecimal> orderTotalsMap = batchOrderTotals(completedOrders);
+
         BigDecimal paymentsTotal = payments.stream()
             .map(AccountTransactions::getAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal completedOrdersTotal = completedOrders.stream()
-            .map(this::orderTotal)
+            .map(o -> orderTotalsMap.getOrDefault(o.getId(), BigDecimal.ZERO))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal sessionsTodayTotal = closedSessions.stream()
@@ -222,9 +301,10 @@ public class DashboardService {
     }
 
     private List<DashboardRecentOrderDTO> buildRecentOrders(String companyId) {
-        List<Order> orders = orderRepository.findByCompanyId(companyId);
+        List<Order> orders = orderRepository.findRecentByCompanyId(companyId, PageRequest.of(0, 5));
+        if (orders.isEmpty()) return List.of();
+        Map<String, BigDecimal> totals = batchOrderTotals(orders);
         return orders.stream()
-            .limit(5)
             .map(order -> {
                 String name = order.getCustomer() != null
                     ? order.getCustomer().getName()
@@ -233,7 +313,7 @@ public class DashboardService {
                     order.getId(),
                     name,
                     order.getStatus(),
-                    scale(orderTotal(order)),
+                    scale(totals.getOrDefault(order.getId(), BigDecimal.ZERO)),
                     order.getCreatedAt(),
                     order.getScheduledAt()
                 );
@@ -242,50 +322,29 @@ public class DashboardService {
     }
 
     private List<DashboardTopCustomerDTO> buildTopCustomers(String companyId) {
-        List<AccountTransactions> allTransactions = transactionsRepository.findByCompanyId(companyId);
-        Map<String, BigDecimal> balances = new HashMap<>();
-        Map<String, People> peopleById = peopleRepository.findByCompanyIdAndType(companyId)
+        return transactionsRepository.findTopCustomersByBalance(companyId, PageRequest.of(0, 5))
             .stream()
-            .collect(Collectors.toMap(People::getId, p -> p));
-
-        for (AccountTransactions transaction : allTransactions) {
-            People customer = transaction.getAccount().getPeople();
-            if (customer == null || !peopleById.containsKey(customer.getId())) {
-                continue;
-            }
-            BigDecimal value = transaction.getAmount();
-            if ("CUSTOMER_PAYMENT".equals(transaction.getOrigin())) {
-                value = value.negate();
-            }
-            balances.merge(customer.getId(), value, BigDecimal::add);
-        }
-
-        return balances.entrySet().stream()
-            .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-            .limit(5)
-            .map(entry -> {
-                People person = peopleById.get(entry.getKey());
-                return new DashboardTopCustomerDTO(
-                    entry.getKey(),
-                    person == null ? "-" : person.getName(),
-                    scale(entry.getValue())
-                );
-            })
+            .map(dto -> new DashboardTopCustomerDTO(dto.id(), dto.name(), scale(dto.balance())))
             .toList();
     }
 
-    private BigDecimal sumCompletedOrders(List<Order> orders) {
+    private BigDecimal sumCompletedOrders(List<Order> orders, Map<String, BigDecimal> totals) {
         return orders.stream()
             .filter(order -> "COMPLETED".equals(order.getStatus()))
-            .map(this::orderTotal)
+            .map(order -> totals.getOrDefault(order.getId(), BigDecimal.ZERO))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal orderTotal(Order order) {
-        List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
-        return items.stream()
-            .map(item -> item.getUnitPrice().multiply(item.getQuantity()))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private Map<String, BigDecimal> batchOrderTotals(List<Order> orders) {
+        if (orders.isEmpty()) return Map.of();
+        List<String> ids = orders.stream().map(Order::getId).toList();
+        return orderItemRepository.findByOrderIdIn(ids).stream()
+            .collect(Collectors.groupingBy(
+                i -> i.getOrder().getId(),
+                Collectors.reducing(BigDecimal.ZERO,
+                    i -> i.getUnitPrice().multiply(i.getQuantity()),
+                    BigDecimal::add)
+            ));
     }
 
     private BigDecimal scale(BigDecimal value) {

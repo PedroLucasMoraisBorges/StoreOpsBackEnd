@@ -42,7 +42,7 @@ public class CustomerController {
         @PathVariable("companyId") String companyId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return customerService.createCustomer(data, companyId);
     }
 
@@ -51,7 +51,7 @@ public class CustomerController {
         @PathVariable("companyId") String companyId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return customerService.getAllCustomers(companyId);
     }
 
@@ -61,7 +61,7 @@ public class CustomerController {
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return customerService.getCustomerById(companyId, customerId);
     }
 
@@ -72,7 +72,7 @@ public class CustomerController {
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return customerService.updateCustomer(companyId, customerId, data);
     }
 
@@ -83,7 +83,7 @@ public class CustomerController {
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return accountTransactionService.createDebit(companyId, customerId, data, user);
     }
 
@@ -94,7 +94,7 @@ public class CustomerController {
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return accountTransactionService.createPayment(companyId, customerId, data, user);
     }
 
@@ -104,7 +104,7 @@ public class CustomerController {
         @PathVariable("customerId") String customerId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return accountTransactionService.listTransactions(companyId, customerId);
     }
 }

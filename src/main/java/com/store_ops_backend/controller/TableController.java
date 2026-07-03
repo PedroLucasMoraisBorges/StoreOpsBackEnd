@@ -12,11 +12,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.store_ops_backend.infra.security.AuthorizationHelper;
 import com.store_ops_backend.models.dtos.AddSessionItemDTO;
+import com.store_ops_backend.models.dtos.CloseSessionDTO;
 import com.store_ops_backend.models.dtos.CreateTableDTO;
 import com.store_ops_backend.models.dtos.TableResponseDTO;
 import com.store_ops_backend.models.dtos.TableSessionResponseDTO;
@@ -125,12 +127,22 @@ public class TableController {
     public TableSessionResponseDTO closeSession(
         @PathVariable("companyId") String companyId,
         @PathVariable("sessionId") String sessionId,
-        @RequestBody(required = false) Map<String, String> body,
+        @RequestBody(required = false) CloseSessionDTO body,
         @AuthenticationPrincipal User user
     ) {
         authorizationHelper.assertUserBelongsToCompany(user, companyId);
-        String paymentMethodId = body != null ? body.get("paymentMethodId") : null;
-        return tableService.closeSession(companyId, sessionId, paymentMethodId);
+        return tableService.closeSession(companyId, sessionId, body);
+    }
+
+    @GetMapping("/sessions/split/{companyId}/{sessionId}")
+    public Map<String, Object> getSplitAmount(
+        @PathVariable("companyId") String companyId,
+        @PathVariable("sessionId") String sessionId,
+        @RequestParam("persons") int persons,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        return tableService.getSplitAmount(companyId, sessionId, persons);
     }
 
     @GetMapping("/sessions/payments/{companyId}")

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.store_ops_backend.models.dtos.CashRegisterResponseDTO;
 import com.store_ops_backend.models.dtos.OpenCashRegisterDTO;
@@ -29,8 +30,9 @@ public class CashRegisterService {
     @Autowired
     private UserCompanyRepository userCompanyRepository;
 
+    @Transactional
     public CashRegisterResponseDTO open(String companyId, User user, OpenCashRegisterDTO data) {
-        cashRegisterRepository.findOpenByCompanyId(companyId).ifPresent(cr -> {
+        cashRegisterRepository.findOpenByCompanyIdForUpdate(companyId).ifPresent(cr -> {
             throw new IllegalStateException("Já existe um caixa aberto para este estabelecimento.");
         });
 
@@ -42,6 +44,7 @@ public class CashRegisterService {
         return toDTO(cashRegisterRepository.save(register));
     }
 
+    @Transactional
     public CashRegisterResponseDTO close(String companyId, String registerId) {
         CashRegister register = cashRegisterRepository.findByIdAndCompanyId(registerId, companyId)
             .orElseThrow(() -> new EntityNotFoundException("Caixa não encontrado."));
@@ -55,6 +58,7 @@ public class CashRegisterService {
         return toDTO(cashRegisterRepository.save(register));
     }
 
+    @Transactional
     public CashRegisterResponseDTO reopen(String companyId, String registerId, String userId) {
         String role = userCompanyRepository.findByCompanyIdAndUserId(companyId, userId)
             .map(uc -> uc.getRole())

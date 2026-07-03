@@ -16,5 +16,6 @@ public record TableSessionResponseDTO(
     BigDecimal total,
     String paymentMethodId,
     String paymentMethodName,
-    OffsetDateTime paidAt
+    OffsetDateTime paidAt,
+    List<PaymentSplitResponseDTO> payments
 ) {}

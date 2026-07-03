@@ -69,8 +69,18 @@ public class CompanyService {
         Company company = repository.findById(companyId).orElseThrow(() -> new RuntimeException("Company not found"));
         var paymentMethods = paymentMethodService.getCompanyPaymentMethods(companyId);
         var allPaymentMethods = paymentMethodService.getAllPaymentMethods();
-        return new CompanyResponseDTO(company, paymentMethods, allPaymentMethods);
-    } 
+        return new CompanyResponseDTO(company, paymentMethods, allPaymentMethods, null);
+    }
+
+    public CompanyResponseDTO getCompanyByIdForUser(String companyId, String userId) {
+        Company company = repository.findById(companyId).orElseThrow(() -> new RuntimeException("Company not found"));
+        var paymentMethods = paymentMethodService.getCompanyPaymentMethods(companyId);
+        var allPaymentMethods = paymentMethodService.getAllPaymentMethods();
+        String role = userCompanyRepository.findByCompanyIdAndUserId(companyId, userId)
+            .map(uc -> uc.getRole())
+            .orElse(null);
+        return new CompanyResponseDTO(company, paymentMethods, allPaymentMethods, role);
+    }
 
     public CompanyResponseDTO updateCompany(String companyId, CreateCompanyDTO data) {
         Company company = repository.findById(companyId).orElseThrow(() -> new RuntimeException("Company not found"));
@@ -99,9 +109,7 @@ public class CompanyService {
 
     public List<CompanyResponseDTO> getAllUserCompanies(String userId, String filter) {
         List<Company> companies = userCompanyService.getCompaniesByUserId(userId);
-        return companies.stream().map(company -> {
-            return getCompanyById(company.getId());
-        }).toList();
+        return companies.stream().map(company -> getCompanyByIdForUser(company.getId(), userId)).toList();
     }
 
     @Transactional

@@ -3,7 +3,9 @@ package com.store_ops_backend.services;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -88,8 +90,10 @@ public class OrderService {
     }
 
     public List<OrderResponseDTO> getAllOrders(String companyId) {
-        return orderRepository.findByCompanyId(companyId).stream()
-            .map(order -> toResponse(order, orderItemRepository.findByOrderId(order.getId())))
+        List<Order> orders = orderRepository.findByCompanyId(companyId);
+        Map<String, List<OrderItem>> itemsByOrder = batchItems(orders);
+        return orders.stream()
+            .map(o -> toResponse(o, itemsByOrder.getOrDefault(o.getId(), List.of())))
             .toList();
     }
 
@@ -101,10 +105,10 @@ public class OrderService {
     }
 
     public List<OrderResponseDTO> getOrdersByCustomer(String companyId, String customerId) {
-        return orderRepository
-            .findByCompanyIdAndCustomerId(companyId, customerId)
-            .stream()
-            .map(order -> toResponse(order, orderItemRepository.findByOrderId(order.getId())))
+        List<Order> orders = orderRepository.findByCompanyIdAndCustomerId(companyId, customerId);
+        Map<String, List<OrderItem>> itemsByOrder = batchItems(orders);
+        return orders.stream()
+            .map(o -> toResponse(o, itemsByOrder.getOrDefault(o.getId(), List.of())))
             .toList();
     }
 
@@ -352,6 +356,13 @@ public class OrderService {
             paymentMethodName,
             order.getPaidAt()
         );
+    }
+
+    private Map<String, List<OrderItem>> batchItems(List<Order> orders) {
+        if (orders.isEmpty()) return Map.of();
+        List<String> ids = orders.stream().map(Order::getId).toList();
+        return orderItemRepository.findByOrderIdIn(ids).stream()
+            .collect(Collectors.groupingBy(i -> i.getOrder().getId()));
     }
 
     private OrderItemResponseDTO toItemResponse(OrderItem item) {

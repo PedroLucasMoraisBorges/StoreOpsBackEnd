@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -27,6 +28,9 @@ public class StockItem {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+
+    @Version
+    private Long version;
 
     private BigDecimal quantity;
 

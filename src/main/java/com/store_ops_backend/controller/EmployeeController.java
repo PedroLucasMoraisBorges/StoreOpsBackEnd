@@ -38,7 +38,7 @@ public class EmployeeController {
         @PathVariable("companyId") String companyId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return service.createEmployee(data, companyId);
     }
 
@@ -47,7 +47,7 @@ public class EmployeeController {
         @PathVariable("companyId") String companyId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return service.getAllEmployees(companyId);
     }
 
@@ -57,7 +57,7 @@ public class EmployeeController {
         @PathVariable("userId") String userId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return service.getEmployeeById(companyId, userId);
     }
 
@@ -68,7 +68,7 @@ public class EmployeeController {
         @PathVariable("userId") String userId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return service.updateEmployee(companyId, userId, data);
     }
 
@@ -78,7 +78,7 @@ public class EmployeeController {
         @PathVariable("userId") String userId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         service.deleteEmployee(companyId, userId);
     }
 
@@ -88,7 +88,7 @@ public class EmployeeController {
         @PathVariable("userId") String userId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         service.updateEmployeeStatus(companyId, userId);
     }
 
@@ -98,7 +98,7 @@ public class EmployeeController {
         @PathVariable("userId") String userId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserBelongsToCompany(user, companyId);
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         return service.getEmployeeAccountTransactions(companyId, userId);
     }
 }

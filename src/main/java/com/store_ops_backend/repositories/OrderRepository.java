@@ -91,7 +91,7 @@ public interface OrderRepository extends JpaRepository<Order, String> {
         where o.company.id = :companyId
         order by o.scheduledAt desc
     """)
-    List<Order> findRecentByCompanyId(org.springframework.data.domain.Pageable pageable);
+    List<Order> findRecentByCompanyId(@Param("companyId") String companyId, org.springframework.data.domain.Pageable pageable);
 
     @Query("""
         select o

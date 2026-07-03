@@ -2,11 +2,14 @@ package com.store_ops_backend.repositories;
 
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.store_ops_backend.models.dtos.DashboardTopCustomerDTO;
 
 import com.store_ops_backend.models.entities.AccountTransactions;
 
@@ -70,6 +73,20 @@ public interface AccountTransactionsRepository extends JpaRepository<AccountTran
         order by t.created_at desc
     """)
     List<AccountTransactions> findByCompanyId(@Param("companyId") String companyId);
+
+    @Query("""
+        select new com.store_ops_backend.models.dtos.DashboardTopCustomerDTO(
+            t.account.people.id,
+            t.account.people.name,
+            sum(case when t.origin = 'CUSTOMER_PAYMENT' then -t.amount else t.amount end)
+        )
+        from account_transactions t
+        where t.account.company.id = :companyId
+        and t.account.people is not null
+        group by t.account.people.id, t.account.people.name
+        order by sum(case when t.origin = 'CUSTOMER_PAYMENT' then -t.amount else t.amount end) desc
+    """)
+    List<DashboardTopCustomerDTO> findTopCustomersByBalance(@Param("companyId") String companyId, Pageable pageable);
 
     @Modifying
     @Transactional
