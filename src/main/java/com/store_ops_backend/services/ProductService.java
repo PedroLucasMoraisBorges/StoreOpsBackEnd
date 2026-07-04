@@ -66,7 +66,7 @@ public class ProductService {
 
         Product product = new Product(
             company, data.name(), data.category(), data.unit(),
-            null, data.sellPrice()
+            BigDecimal.ZERO, data.sellPrice()
         );
         return toResponse(productRepository.save(product));
     }
