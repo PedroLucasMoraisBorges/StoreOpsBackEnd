@@ -34,6 +34,7 @@ public class SaleService {
     @Autowired private OrderItemRepository orderItemRepository;
     @Autowired private StockItemRepository stockItemRepository;
     @Autowired private CashRegisterRepository cashRegisterRepository;
+    @Autowired private LowStockNotifier lowStockNotifier;
 
     @Transactional
     public OrderResponseDTO createCounterSale(CreateCounterSaleDTO data, String companyId) {
@@ -87,8 +88,10 @@ public class SaleService {
                 if (stockItem != null) {
                     BigDecimal newQty = stockItem.getQuantity().subtract(item.quantity());
                     if (newQty.compareTo(BigDecimal.ZERO) >= 0) {
+                        boolean wasBelow = lowStockNotifier.isBelow(stockItem);
                         stockItem.applyMovement(item.quantity().negate());
                         stockItemRepository.save(stockItem);
+                        lowStockNotifier.notifyIfCrossedMinimum(stockItem, wasBelow);
                     }
                 }
             } catch (Exception ignored) {

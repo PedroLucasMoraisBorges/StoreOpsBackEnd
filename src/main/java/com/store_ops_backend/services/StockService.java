@@ -35,6 +35,7 @@ public class StockService {
     @Autowired private ProductVariantRepository variantRepository;
     @Autowired private ProductComponentOptionRepository componentOptionRepository;
     @Autowired private CompanyRepository companyRepository;
+    @Autowired private LowStockNotifier lowStockNotifier;
 
     public List<StockItemResponseDTO> listStock(String companyId) {
         return stockItemRepository.findByCompanyIdOrderByProductNameAsc(companyId)
@@ -77,8 +78,10 @@ public class StockService {
             throw new IllegalArgumentException("Quantidade em estoque não pode ser negativa");
         }
 
+        boolean wasBelow = lowStockNotifier.isBelow(stockItem);
         stockItem.applyMovement(delta);
         stockItemRepository.save(stockItem);
+        lowStockNotifier.notifyIfCrossedMinimum(stockItem, wasBelow);
 
         StockMovement movement = new StockMovement(stockItem, company, user, data.type(), data.quantity(), data.notes());
         return toMovementResponse(movementRepository.save(movement));

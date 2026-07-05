@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.store_ops_backend.models.dtos.CreateOnlineOrderDTO;
 import com.store_ops_backend.models.dtos.MenuResponseDTO;
 import com.store_ops_backend.models.dtos.MenuResponseDTO.PaymentMethodDTO;
+import com.store_ops_backend.models.dtos.NotificationEventDTO;
 import com.store_ops_backend.models.dtos.OnlineOrderTrackingDTO;
 import com.store_ops_backend.models.dtos.OrderItemResponseDTO;
 import com.store_ops_backend.models.dtos.ProductResponseDTO;
@@ -33,6 +35,7 @@ import com.store_ops_backend.repositories.OrderItemRepository;
 import com.store_ops_backend.repositories.OrderRepository;
 import com.store_ops_backend.repositories.PaymentMethodRepository;
 import com.store_ops_backend.repositories.StockItemRepository;
+import com.store_ops_backend.services.LowStockNotifier;
 import com.store_ops_backend.services.OrderNotificationService;
 import com.store_ops_backend.services.ProductService;
 
@@ -51,6 +54,8 @@ public class MenuController {
     @Autowired private PaymentMethodRepository paymentMethodRepository;
     @Autowired private StockItemRepository stockItemRepository;
     @Autowired private CashRegisterRepository cashRegisterRepository;
+    @Autowired private ApplicationEventPublisher eventPublisher;
+    @Autowired private LowStockNotifier lowStockNotifier;
 
     @GetMapping("/{slug}")
     public MenuResponseDTO getMenu(@PathVariable("slug") String slug) {
@@ -137,8 +142,10 @@ public class MenuController {
                 if (stockItem != null) {
                     BigDecimal newQty = stockItem.getQuantity().subtract(item.quantity());
                     if (newQty.compareTo(BigDecimal.ZERO) >= 0) {
+                        boolean wasBelow = lowStockNotifier.isBelow(stockItem);
                         stockItem.applyMovement(item.quantity().negate());
                         stockItemRepository.save(stockItem);
+                        lowStockNotifier.notifyIfCrossedMinimum(stockItem, wasBelow);
                     }
                 }
             } catch (Exception ignored) {
@@ -155,6 +162,20 @@ public class MenuController {
         } catch (Exception e) {
             System.out.println("[SSE] Erro ao notificar pedido: " + e.getMessage());
             e.printStackTrace();
+        }
+
+        try {
+            eventPublisher.publishEvent(new NotificationEventDTO(
+                company.getId(),
+                NotificationEventDTO.Type.NEW_ORDER,
+                "Nova encomenda de " + data.customerName(),
+                "Total: R$ " + total + (type.equals("DELIVERY") ? " • Entrega" : " • Retirada"),
+                "/orders",
+                "order-" + order.getId(),
+                null
+            ));
+        } catch (Exception ignored) {
+            // Push é best-effort; nunca afeta o pedido
         }
 
         return toTracking(order, data.deliveryMode(), data.paymentNote());

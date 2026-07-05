@@ -4,10 +4,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.store_ops_backend.models.dtos.CashRegisterResponseDTO;
+import com.store_ops_backend.models.dtos.NotificationEventDTO;
 import com.store_ops_backend.models.dtos.OpenCashRegisterDTO;
 import com.store_ops_backend.models.entities.CashRegister;
 import com.store_ops_backend.models.entities.Company;
@@ -30,6 +32,9 @@ public class CashRegisterService {
     @Autowired
     private UserCompanyRepository userCompanyRepository;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
     @Transactional
     public CashRegisterResponseDTO open(String companyId, User user, OpenCashRegisterDTO data) {
         cashRegisterRepository.findOpenByCompanyIdForUpdate(companyId).ifPresent(cr -> {
@@ -41,11 +46,15 @@ public class CashRegisterService {
 
         String shift = detectShift(OffsetDateTime.now());
         CashRegister register = new CashRegister(company, user, shift, data.notes());
-        return toDTO(cashRegisterRepository.save(register));
+        CashRegisterResponseDTO dto = toDTO(cashRegisterRepository.save(register));
+        publishCashEvent(companyId, NotificationEventDTO.Type.CASH_OPEN,
+            "Caixa aberto", "Aberto por " + displayName(user) + " • Turno " + shift,
+            register.getId(), user.getId());
+        return dto;
     }
 
     @Transactional
-    public CashRegisterResponseDTO close(String companyId, String registerId) {
+    public CashRegisterResponseDTO close(String companyId, String registerId, User actor) {
         CashRegister register = cashRegisterRepository.findByIdAndCompanyId(registerId, companyId)
             .orElseThrow(() -> new EntityNotFoundException("Caixa não encontrado."));
 
@@ -55,7 +64,11 @@ public class CashRegisterService {
 
         register.setStatus("CLOSED");
         register.setClosedAt(OffsetDateTime.now());
-        return toDTO(cashRegisterRepository.save(register));
+        CashRegisterResponseDTO dto = toDTO(cashRegisterRepository.save(register));
+        publishCashEvent(companyId, NotificationEventDTO.Type.CASH_CLOSE,
+            "Caixa fechado", "Fechado por " + displayName(actor) + " • Turno " + register.getShift(),
+            register.getId(), actor != null ? actor.getId() : null);
+        return dto;
     }
 
     @Transactional
@@ -78,7 +91,25 @@ public class CashRegisterService {
 
         register.setStatus("OPEN");
         register.setClosedAt(null);
-        return toDTO(cashRegisterRepository.save(register));
+        CashRegisterResponseDTO dto = toDTO(cashRegisterRepository.save(register));
+        publishCashEvent(companyId, NotificationEventDTO.Type.CASH_OPEN,
+            "Caixa reaberto", "Turno " + register.getShift(), register.getId(), userId);
+        return dto;
+    }
+
+    private void publishCashEvent(String companyId, NotificationEventDTO.Type type,
+                                  String title, String body, String registerId, String actorUserId) {
+        try {
+            eventPublisher.publishEvent(new NotificationEventDTO(
+                companyId, type, title, body, "/cash-flow", "cash-" + registerId, actorUserId));
+        } catch (Exception ignored) {
+            // Notificação é best-effort; nunca afeta a operação do caixa
+        }
+    }
+
+    private String displayName(User user) {
+        if (user == null) return "usuário";
+        return user.getName() != null ? user.getName() : user.getUsername();
     }
 
     public List<CashRegisterResponseDTO> getAll(String companyId) {

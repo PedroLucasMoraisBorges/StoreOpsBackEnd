@@ -50,6 +50,7 @@ public class TableService {
     @Autowired private ProductRepository productRepository;
     @Autowired private ProductVariantRepository variantRepository;
     @Autowired private StockItemRepository stockItemRepository;
+    @Autowired private LowStockNotifier lowStockNotifier;
 
     public List<TableResponseDTO> listTables(String companyId) {
         return tableRepository.findByCompanyIdOrderByNumberAsc(companyId)
@@ -206,8 +207,10 @@ public class TableService {
             if (stockItem != null) {
                 BigDecimal newQty = stockItem.getQuantity().subtract(quantity);
                 if (newQty.compareTo(BigDecimal.ZERO) >= 0) {
+                    boolean wasBelow = lowStockNotifier.isBelow(stockItem);
                     stockItem.applyMovement(quantity.negate());
                     stockItemRepository.save(stockItem);
+                    lowStockNotifier.notifyIfCrossedMinimum(stockItem, wasBelow);
                 }
             }
         } catch (Exception ignored) {

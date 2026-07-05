@@ -45,7 +45,7 @@ public class CashRegisterController {
         @AuthenticationPrincipal User user
     ) {
         authorizationHelper.assertUserBelongsToCompany(user, companyId);
-        return cashRegisterService.close(companyId, registerId);
+        return cashRegisterService.close(companyId, registerId, user);
     }
 
     @PutMapping("/reopen/{companyId}/{registerId}")

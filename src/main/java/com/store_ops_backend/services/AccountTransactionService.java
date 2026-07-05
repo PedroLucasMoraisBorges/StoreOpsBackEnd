@@ -4,10 +4,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import com.store_ops_backend.models.dtos.CompanyTransactionResponseDTO;
 import com.store_ops_backend.models.dtos.CreateTransactionDTO;
+import com.store_ops_backend.models.dtos.NotificationEventDTO;
 import com.store_ops_backend.models.dtos.TransactionResponseDTO;
 import com.store_ops_backend.models.entities.Account;
 import com.store_ops_backend.models.entities.AccountTransactions;
@@ -24,6 +26,9 @@ public class AccountTransactionService {
 
     @Autowired
     private CustomerService customerService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     public TransactionResponseDTO createDebit(String companyId, String customerId, CreateTransactionDTO data, User user) {
         return createTransaction(companyId, customerId, data, user, "CUSTOMER_DEBIT");
@@ -70,6 +75,23 @@ public class AccountTransactionService {
         );
 
         transactionsRepository.save(transaction);
+
+        try {
+            boolean isDebit = "CUSTOMER_DEBIT".equals(origin);
+            eventPublisher.publishEvent(new NotificationEventDTO(
+                companyId,
+                isDebit ? NotificationEventDTO.Type.FIADO_DEBIT : NotificationEventDTO.Type.FIADO_PAYMENT,
+                isDebit ? "Novo fiado: " + person.getName() : "Pagamento de fiado: " + person.getName(),
+                "Valor: R$ " + data.amount()
+                    + (data.description() != null && !data.description().isBlank() ? " • " + data.description() : ""),
+                "/customers",
+                "fiado-" + transaction.getId(),
+                user != null ? user.getId() : null
+            ));
+        } catch (Exception ignored) {
+            // Notificação é best-effort; nunca afeta a transação
+        }
+
         return toResponse(transaction);
     }
 
