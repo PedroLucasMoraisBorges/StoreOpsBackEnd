@@ -1,5 +1,6 @@
 package com.store_ops_backend.services;
 
+import java.text.Normalizer;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -26,6 +27,9 @@ import com.store_ops_backend.repositories.UserRepository;
 
 @Service
 public class EmployeeService {
+
+    private static final String DEFAULT_PASSWORD = "storeopsemp01";
+
     @Autowired
     private UserRepository userRepository;
 
@@ -51,27 +55,22 @@ public class EmployeeService {
     private AccountTransactionsRepository transactionsRepository;
 
     public EmployeeResponseDTO createEmployee(CreateEmployeeDTO data, String companyId) {
-        if (this.userRepository.findBylogin(data.login()) != null) {
-            throw new RuntimeException("Login already exists");
-        }
-
         Company company = companyRepository.findById(companyId)
             .orElseThrow(() -> new RuntimeException("Company not found"));
 
-        String name = data.name() == null || data.name().isBlank() ? data.login() : data.name();
+        String login = generateUsername(data.name(), company.getName());
         UserRole userRole = parseUserRole(data.role());
-        String encryptedPassword = passwordEncoder.encode(data.password());
-        User user = new User(data.login(), name, encryptedPassword, userRole);
+        String encryptedPassword = passwordEncoder.encode(DEFAULT_PASSWORD);
+        User user = new User(login, data.name(), encryptedPassword, userRole);
         userRepository.save(user);
 
-        People people = new People(name, "EMPLOYEE", company, user);
+        People people = new People(data.name(), "EMPLOYEE", company, user, null, data.contact(), true);
         peopleRepository.save(people);
 
         Account account = new Account(null, "OPEN", OffsetDateTime.now(), null, people, company);
         accountRepository.save(account);
 
-
-        String companyRole = data.role() == null || data.role().isBlank() ? "USER" : data.role();
+        String companyRole = "ADMIN".equalsIgnoreCase(data.position()) ? "ADMIN" : "USER";
         UserCompany userCompany = userCompanyService.createUserCompanyWithPosition(
             user,
             company,
@@ -100,7 +99,10 @@ public class EmployeeService {
         if (data.name() != null && !data.name().isBlank()) {
             user.updateName(data.name());
             peopleRepository.findByUserIdAndCompanyId(userId, companyId)
-                .ifPresent(people -> people.update(data.name(), null, null, null));
+                .ifPresent(people -> people.update(data.name(), null, data.contact(), null));
+        } else if (data.contact() != null) {
+            peopleRepository.findByUserIdAndCompanyId(userId, companyId)
+                .ifPresent(people -> people.update(null, null, data.contact(), null));
         }
 
         if (data.role() != null && !data.role().isBlank()) {
@@ -111,6 +113,14 @@ public class EmployeeService {
         userCompanyService.saveUserCompany(userCompany);
 
         return toEmployeeResponse(userCompany);
+    }
+
+    @Transactional
+    public void resetEmployeePassword(String companyId, String userId) {
+        UserCompany userCompany = userCompanyService.getUserCompany(companyId, userId);
+        User user = userCompany.getUser();
+        user.updatePassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+        userRepository.save(user);
     }
 
     public List<TransactionResponseDTO> getEmployeeAccountTransactions(String companyId, String userId) {
@@ -143,7 +153,28 @@ public class EmployeeService {
         userCompanyService.updateUserCompanyStatus(companyId, userId);
     }
 
-    
+    private String generateUsername(String employeeName, String companyName) {
+        String namePart = normalizeForUsername(employeeName);
+        String companyPart = normalizeForUsername(companyName);
+        String base = namePart + "." + companyPart;
+
+        if (userRepository.findBylogin(base) == null) {
+            return base;
+        }
+
+        int counter = 2;
+        while (userRepository.findBylogin(base + counter) != null) {
+            counter++;
+        }
+        return base + counter;
+    }
+
+    private String normalizeForUsername(String text) {
+        String nfd = Normalizer.normalize(text, Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{M}", "")
+                  .toLowerCase()
+                  .replaceAll("[^a-z0-9]", "");
+    }
 
     private UserRole parseUserRole(String role) {
         if (role == null || role.isBlank()) {
@@ -156,10 +187,15 @@ public class EmployeeService {
 
     private EmployeeResponseDTO toEmployeeResponse(UserCompany userCompany) {
         User user = userCompany.getUser();
+        String contact = peopleRepository
+            .findByUserIdAndCompanyId(user.getId(), userCompany.getCompany().getId())
+            .map(People::getContact)
+            .orElse(null);
         return new EmployeeResponseDTO(
             user.getId(),
             user.getName(),
             user.getLogin(),
+            contact,
             userCompany.getRole(),
             userCompany.getPosition(),
             userCompany.getStatus(),

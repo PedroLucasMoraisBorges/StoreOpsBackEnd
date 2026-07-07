@@ -51,7 +51,7 @@ public class CustomerController {
         @PathVariable("companyId") String companyId,
         @AuthenticationPrincipal User user
     ) {
-        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        authorizationHelper.assertUserBelongsToCompany(user, companyId);
         return customerService.getAllCustomers(companyId);
     }
 

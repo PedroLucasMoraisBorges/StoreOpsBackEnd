@@ -92,6 +92,16 @@ public class EmployeeController {
         service.updateEmployeeStatus(companyId, userId);
     }
 
+    @PutMapping("/resetPassword/{companyId}/{userId}")
+    public void resetEmployeePassword(
+        @PathVariable("companyId") String companyId,
+        @PathVariable("userId") String userId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        service.resetEmployeePassword(companyId, userId);
+    }
+
     @GetMapping("/transactions/{companyId}/{userId}")
     public List<TransactionResponseDTO> getEmployeeAccountTransactions(
         @PathVariable("companyId") String companyId,

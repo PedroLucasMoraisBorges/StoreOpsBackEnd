@@ -50,6 +50,10 @@ public class User implements UserDetails {
     public void updateRole(UserRole role) {
         this.role = role;
     }
+
+    public void updatePassword(String password) {
+        this.password = password;
+    }
     
     @Override
     public String getUsername() {

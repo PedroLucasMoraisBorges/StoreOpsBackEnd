@@ -6,6 +6,7 @@ public record EmployeeResponseDTO(
     String userId,
     String name,
     String login,
+    String contact,
     String role,
     String position,
     Boolean status,
