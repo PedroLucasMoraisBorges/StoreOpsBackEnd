@@ -333,9 +333,9 @@ public class ReportService {
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
             List<AccountTransactions> fiadoTransactions = transactionsRepository.findFiadoByCompanyAndCustomer(
                 companyId,
-                customerId,
                 period.start(),
-                period.end()
+                period.end(),
+                customerId
             );
 
             PdfReportBuilder pdf = new PdfReportBuilder(
