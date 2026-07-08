@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.store_ops_backend.models.entities.Account;
 import com.store_ops_backend.models.entities.AccountTransactions;
 import com.store_ops_backend.models.entities.CashRegister;
 import com.store_ops_backend.models.entities.Company;
@@ -24,6 +25,7 @@ import com.store_ops_backend.models.entities.People;
 import com.store_ops_backend.models.entities.TableSession;
 import com.store_ops_backend.models.entities.UserCompany;
 import com.store_ops_backend.models.dtos.ProductProfitabilityDTO;
+import com.store_ops_backend.repositories.AccountRepository;
 import com.store_ops_backend.repositories.AccountTransactionsRepository;
 import com.store_ops_backend.repositories.CashRegisterRepository;
 import com.store_ops_backend.repositories.CompanyExpenseRepository;
@@ -52,6 +54,9 @@ public class ReportService {
 
     @Autowired
     private AccountTransactionsRepository transactionsRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
 
     @Autowired
     private PeopleRepository peopleRepository;
@@ -319,10 +324,50 @@ public class ReportService {
         return pdf.build();
     }
 
-    public byte[] buildFiadoReport(String companyId, LocalDate dateFrom, LocalDate dateTo) {
+    public byte[] buildFiadoReport(String companyId, LocalDate dateFrom, LocalDate dateTo, String customerId) {
         Company company = loadCompany(companyId);
         PeriodRange period = PeriodRange.of(dateFrom, dateTo);
 
+        if (customerId != null) {
+            People customer = peopleRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+            List<AccountTransactions> fiadoTransactions = transactionsRepository.findFiadoByCompanyAndCustomer(
+                companyId,
+                customerId,
+                period.start(),
+                period.end()
+            );
+
+            PdfReportBuilder pdf = new PdfReportBuilder(
+                "Relatório de Compras Fiadas - Cliente: " + customer.getName(),
+                company.getName(),
+                period.label()
+            );
+
+            List<String> headers = List.of("Data", "Vendedor", "Valor", "Situação");
+            List<Float> widths = List.of(100f, 200f, 100f, 100f);
+            List<List<String>> rows = new ArrayList<>();
+            BigDecimal totalValue = BigDecimal.ZERO;
+
+            for (AccountTransactions transaction : fiadoTransactions) {
+                String sellerName = transaction.getUser().getName();
+                totalValue = totalValue.add(transaction.getAmount());
+                rows.add(List.of(
+                    formatDateTime(transaction.getCreated_at()),
+                    sellerName,
+                    formatMoney(transaction.getAmount()),
+                    "Aberta"
+                ));
+            }
+
+            pdf.addTable(headers, rows, widths);
+            pdf.addSectionTitle("Resumo Geral");
+            pdf.addParagraph("Total de compras fiadas: " + fiadoTransactions.size());
+            pdf.addParagraph("Valor total: R$ " + formatMoney(totalValue));
+            pdf.addParagraph("Período: " + period.label());
+
+            return pdf.build();
+        }
         List<AccountTransactions> fiadoTransactions = transactionsRepository.findFiadoByCompanyAndCreatedAtBetween(
             companyId,
             period.start(),
@@ -360,6 +405,84 @@ public class ReportService {
         pdf.addParagraph("Período: " + period.label());
 
         return pdf.build();
+    }
+
+    public byte[] buildCustomerFiadoStatementReport(String companyId, String customerId) {
+        Company company = loadCompany(companyId);
+        People customer = peopleRepository.findById(customerId)
+            .orElseThrow(() -> new RuntimeException("Customer not found"));
+        Account account = accountRepository.findByPersonIdAndCompanyId(customerId, companyId).orElse(null);
+
+        List<AccountTransactions> allTransactions = account == null
+            ? List.of()
+            : transactionsRepository.findByAccountIdOrderByCreatedAtAsc(account.getId());
+
+        // A conta é considerada "quitada" sempre que o saldo devedor zera; o histórico
+        // exibido no relatório começa logo após a última quitação total.
+        int lastZeroIndex = -1;
+        BigDecimal cursor = BigDecimal.ZERO;
+        for (int i = 0; i < allTransactions.size(); i++) {
+            cursor = cursor.add(signedAmount(allTransactions.get(i)));
+            if (cursor.compareTo(BigDecimal.ZERO) == 0) {
+                lastZeroIndex = i;
+            }
+        }
+        List<AccountTransactions> currentCycle = allTransactions.subList(lastZeroIndex + 1, allTransactions.size());
+
+        PdfReportBuilder pdf = new PdfReportBuilder(
+            "Relatório de Fiado - Cliente: " + customer.getName(),
+            company.getName(),
+            "Sem período"
+        );
+
+        List<String> headers = List.of("Data", "Tipo", "Descrição", "Vendedor", "Valor", "Saldo devedor");
+        List<Float> widths = List.of(75f, 60f, 140f, 90f, 65f, 85f);
+        List<List<String>> rows = new ArrayList<>();
+
+        BigDecimal balance = BigDecimal.ZERO;
+        BigDecimal totalDebits = BigDecimal.ZERO;
+        BigDecimal totalPayments = BigDecimal.ZERO;
+
+        for (AccountTransactions transaction : currentCycle) {
+            boolean isPayment = "CUSTOMER_PAYMENT".equals(transaction.getOrigin());
+            balance = balance.add(signedAmount(transaction));
+            if (isPayment) {
+                totalPayments = totalPayments.add(transaction.getAmount());
+            } else {
+                totalDebits = totalDebits.add(transaction.getAmount());
+            }
+
+            String description = transaction.getDescription();
+            rows.add(List.of(
+                formatDateTime(transaction.getCreated_at()),
+                isPayment ? "Pagamento" : "Fiado",
+                description == null || description.isBlank() ? "-" : description,
+                transaction.getUser().getName(),
+                "R$ " + formatMoney(transaction.getAmount()),
+                "R$ " + formatMoney(balance)
+            ));
+        }
+
+        pdf.addTable(headers, rows, widths);
+
+        pdf.addSectionTitle("Resumo Geral");
+        if (currentCycle.isEmpty()) {
+            pdf.addParagraph(allTransactions.isEmpty()
+                ? "Nenhuma movimentação de fiado registrada para este cliente."
+                : "Cliente sem débitos em aberto — todas as compras fiadas anteriores já foram quitadas.");
+        } else {
+            pdf.addParagraph("Total de compras fiadas: R$ " + formatMoney(totalDebits));
+            pdf.addParagraph("Total pago: R$ " + formatMoney(totalPayments));
+        }
+        pdf.addParagraph("Saldo devedor atual: R$ " + formatMoney(balance));
+
+        return pdf.build();
+    }
+
+    private BigDecimal signedAmount(AccountTransactions transaction) {
+        return "CUSTOMER_PAYMENT".equals(transaction.getOrigin())
+            ? transaction.getAmount().negate()
+            : transaction.getAmount();
     }
 
     public byte[] buildCustomersReport(String companyId) {

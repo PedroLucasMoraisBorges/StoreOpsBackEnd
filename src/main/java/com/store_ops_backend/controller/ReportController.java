@@ -86,12 +86,24 @@ public class ReportController {
         @RequestParam("companyId") String companyId,
         @RequestParam(value = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
         @RequestParam(value = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+        @RequestParam(value = "customerId", required = false) String customerId,
         @AuthenticationPrincipal User user
     ) {
         authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
         validatePeriod(dateFrom, dateTo);
-        byte[] pdf = reportService.buildFiadoReport(companyId, dateFrom, dateTo);
+        byte[] pdf = reportService.buildFiadoReport(companyId, dateFrom, dateTo, customerId);
         return buildPdfResponse(pdf, "relatorio-fiado", dateFrom, dateTo);
+    }
+
+    @GetMapping("/fiado/customer")
+    public ResponseEntity<byte[]> customerFiadoReport(
+        @RequestParam("companyId") String companyId,
+        @RequestParam("customerId") String customerId,
+        @AuthenticationPrincipal User user
+    ) {
+        authorizationHelper.assertUserHasCompanyRole(user, companyId, "ADMIN", "MANAGER");
+        byte[] pdf = reportService.buildCustomerFiadoStatementReport(companyId, customerId);
+        return buildPdfResponse(pdf, "relatorio-fiado-cliente", null, null);
     }
 
     @GetMapping("/customers")

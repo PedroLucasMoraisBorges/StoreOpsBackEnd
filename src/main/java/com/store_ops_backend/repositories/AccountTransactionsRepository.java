@@ -25,6 +25,14 @@ public interface AccountTransactionsRepository extends JpaRepository<AccountTran
     @Query("""
         select t
         from account_transactions t
+        where t.account.id = :accountId
+        order by t.created_at asc
+    """)
+    List<AccountTransactions> findByAccountIdOrderByCreatedAtAsc(@Param("accountId") String accountId);
+
+    @Query("""
+        select t
+        from account_transactions t
         where t.account.company.id = :companyId
         and t.origin = 'CUSTOMER_DEBIT'
         and t.created_at between :dateFrom and :dateTo
@@ -87,6 +95,22 @@ public interface AccountTransactionsRepository extends JpaRepository<AccountTran
         order by sum(case when t.origin = 'CUSTOMER_PAYMENT' then -t.amount else t.amount end) desc
     """)
     List<DashboardTopCustomerDTO> findTopCustomersByBalance(@Param("companyId") String companyId, Pageable pageable);
+
+    @Query("""
+        select t
+        from account_transactions t
+        where t.account.company.id = :companyId
+        and t.origin = 'CUSTOMER_DEBIT'
+        and t.created_at between :dateFrom and :dateTo
+        and t.account.people.id = :customerId
+        order by t.created_at desc
+    """)
+    List<AccountTransactions> findFiadoByCompanyAndCustomer(
+        @Param("companyId") String companyId,
+        @Param("dateFrom") java.time.OffsetDateTime dateFrom,
+        @Param("dateTo") java.time.OffsetDateTime dateTo,
+        @Param("customerId") String customerId
+    );
 
     @Modifying
     @Transactional
